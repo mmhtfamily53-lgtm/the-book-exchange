@@ -1,0 +1,955 @@
+import {
+  Book,
+  StudyMaterial,
+  EducationalVideo,
+  CreatorChannel,
+  PublishedWork,
+  ExchangeProposal,
+  ChatConversation,
+  AppNotification,
+  UserAccount,
+  FeedbackSubmission
+} from '../types';
+
+export const initialCurrentUser: UserAccount = {
+  id: 'usr_me_01',
+  name: 'Aarav Sharma',
+  email: 'aarav.sharma@bookexchange.org',
+  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+  isBuyer: true,
+  isSeller: true,
+  isCreator: true,
+  isAuthor: true,
+  isAdmin: false,
+  location: 'Connaught Place, New Delhi',
+  boardOrUniversity: 'Delhi University / CBSE Alumnus',
+  phone: '+91 98765 43210',
+  bio: 'Computer Science undergrad & avid reader. Sharing semester notes, trading classic sci-fi novels and publishing technical study primers.',
+  reputationPoints: 480,
+  channelId: 'chan_aarav_01'
+};
+
+export const mockBooks: Book[] = [
+  // 1. Educational - CBSE Class 10
+  {
+    id: 'bk_edu_01',
+    title: 'NCERT Mathematics for Class X (Fully Solved & Annotated)',
+    author: 'NCERT / Expert Editorial Board',
+    coverImage: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'educational',
+    subcategory: 'Mathematics',
+    board: 'NCERT',
+    classLevel: 'Class 10',
+    subject: 'Mathematics',
+    description: 'Complete NCERT Class 10 Maths with solved board exam questions from 2018-2024. Contains pencil markings on key theorems like Trigonometry and Real Numbers.',
+    originalPrice: 220,
+    sellingPrice: 85,
+    condition: 'Very Good',
+    conditionNotes: 'All pages intact, pencil formulas in margins, no water damage.',
+    seller: {
+      id: 'sel_rohit_01',
+      name: 'Rohit Verma',
+      email: 'rohit.v@example.com',
+      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80',
+      rating: 4.9,
+      reviewsCount: 38,
+      location: 'South Extension, New Delhi',
+      campusOrSchool: 'Kendriya Vidyalaya Alumnus',
+      isVerifiedStudent: true,
+      isVerifiedSeller: true,
+      memberSince: '2024'
+    },
+    location: 'New Delhi (Local pickup available)',
+    forSale: true,
+    forExchange: true,
+    isFreeDonation: false,
+    exchangeWishlist: ['Class 11 NCERT Physics Vol 1', 'RD Sharma Class 11'],
+    isbn: '978-81-7450-634-4',
+    edition: '2024 Revised Edition',
+    language: 'English',
+    pageCount: 328,
+    tags: ['Class 10', 'CBSE', 'Maths', 'Board Exam', 'Solved'],
+    createdAt: '2 days ago',
+    status: 'available'
+  },
+  // 2. Educational - CBSE Class 12 Physics
+  {
+    id: 'bk_edu_02',
+    title: 'Concepts of Physics (Vol 1 & 2 Set) - HC Verma',
+    author: 'Dr. H.C. Verma',
+    coverImage: 'https://images.unsplash.com/photo-1532012164546-f432f2e3777f?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'educational',
+    subcategory: 'Physics',
+    board: 'CBSE',
+    classLevel: 'Class 12',
+    subject: 'Physics',
+    description: 'The holy grail for JEE Main, JEE Advanced and Class 12 Board physics. Comes with hand-typed solutions booklet for Chapter 3 to 18.',
+    originalPrice: 950,
+    sellingPrice: 380,
+    condition: 'Like New',
+    conditionNotes: 'Hardly any crease, spines firm, includes separate formula sheet.',
+    seller: {
+      id: 'sel_priya_02',
+      name: 'Priya Sundaram',
+      email: 'priya.s@example.com',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+      rating: 5.0,
+      reviewsCount: 64,
+      location: 'Koramangala, Bengaluru',
+      campusOrSchool: 'IIT Madras (Freshman)',
+      isVerifiedStudent: true,
+      isVerifiedSeller: true,
+      memberSince: '2023'
+    },
+    location: 'Bengaluru (Koramangala / HSR)',
+    forSale: true,
+    forExchange: true,
+    isFreeDonation: false,
+    exchangeWishlist: ['Halliday & Resnick Fundamentals of Physics', 'Calculus by Spivak'],
+    isbn: '978-81-7709-187-8',
+    edition: '2023 Edition',
+    language: 'English',
+    pageCount: 462,
+    tags: ['Physics', 'JEE Main', 'JEE Advanced', 'Class 12', 'HC Verma'],
+    createdAt: '3 days ago',
+    status: 'available'
+  },
+  // 3. Competitive Exams - NEET Biology
+  {
+    id: 'bk_edu_03',
+    title: 'Objective NCERT at your Fingertips - Biology (NEET Prep)',
+    author: 'MTG Editorial Board',
+    coverImage: 'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'educational',
+    subcategory: 'Biology',
+    board: 'Competitive Exams',
+    classLevel: 'Competitive (JEE/NEET/UPSC/GATE)',
+    subject: 'Biology',
+    description: 'Over 4,500 MCQs extracted line-by-line from NCERT Class 11 and 12 Biology textbooks. Includes previous 10 years NEET questions with visual diagrams.',
+    originalPrice: 850,
+    sellingPrice: 290,
+    condition: 'Good',
+    conditionNotes: 'Highlighter marks on high-weightage chapters like Genetics and Human Physiology.',
+    seller: {
+      id: 'sel_anjali_03',
+      name: 'Dr. Anjali Menon',
+      email: 'anjali.m@example.com',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+      rating: 4.8,
+      reviewsCount: 22,
+      location: 'Thiruvananthapuram, Kerala',
+      campusOrSchool: 'AIIMS Alumnus',
+      isVerifiedStudent: true,
+      isVerifiedSeller: true,
+      memberSince: '2024'
+    },
+    location: 'Thiruvananthapuram / Shipping across India',
+    forSale: true,
+    forExchange: true,
+    isFreeDonation: false,
+    exchangeWishlist: ['Guyton and Hall Textbook of Medical Physiology', 'Robbins Pathology'],
+    isbn: '978-93-91191-44-3',
+    edition: '2024 Exam Edition',
+    language: 'English',
+    pageCount: 820,
+    tags: ['NEET', 'Biology', 'Medical Entrance', 'NCERT MCQs'],
+    createdAt: '1 day ago',
+    status: 'available'
+  },
+  // 4. College / University - Engineering
+  {
+    id: 'bk_edu_04',
+    title: 'Introduction to Algorithms (CLRS 4th Edition)',
+    author: 'Cormen, Leiserson, Rivest, Stein',
+    coverImage: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'educational',
+    subcategory: 'Computer Science',
+    board: 'College / University',
+    classLevel: 'Undergraduate (UG)',
+    subject: 'Computer Science',
+    description: 'Comprehensive undergraduate algorithms textbook. Barely used, pristine spine. Covers dynamic programming, graph algorithms, and NP-completeness.',
+    originalPrice: 1650,
+    sellingPrice: 650,
+    condition: 'Like New',
+    conditionNotes: 'Looks brand new, pristine condition, no writings inside.',
+    seller: {
+      id: 'sel_rohit_01',
+      name: 'Rohit Verma',
+      email: 'rohit.v@example.com',
+      avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80',
+      rating: 4.9,
+      reviewsCount: 38,
+      location: 'South Extension, New Delhi',
+      campusOrSchool: 'Delhi University / IIT Delhi Hub',
+      isVerifiedStudent: true,
+      isVerifiedSeller: true,
+      memberSince: '2024'
+    },
+    location: 'New Delhi / Free campus delivery to DU North/South Campus',
+    forSale: true,
+    forExchange: true,
+    isFreeDonation: false,
+    exchangeWishlist: ['Clean Code by Robert C. Martin', 'Designing Data-Intensive Applications'],
+    isbn: '978-02-62046-30-5',
+    edition: '4th International Edition',
+    language: 'English',
+    pageCount: 1312,
+    tags: ['Computer Science', 'Algorithms', 'CLRS', 'Data Structures', 'College'],
+    createdAt: '4 days ago',
+    status: 'available'
+  },
+  // 5. Free Donation - Class 9 NCERT Science
+  {
+    id: 'bk_edu_free_01',
+    title: 'NCERT Science for Class IX (Free Student Donation)',
+    author: 'NCERT',
+    coverImage: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'educational',
+    subcategory: 'Science',
+    board: 'NCERT',
+    classLevel: 'Class 9',
+    subject: 'Science',
+    description: 'Donated by our community outreach program for any student needing study books who cannot afford new copies. Free of charge, local pickup or recipient pays just shipping ($1.50).',
+    originalPrice: 195,
+    sellingPrice: 0,
+    condition: 'Good',
+    conditionNotes: 'All pages intact, well preserved with brown paper cover.',
+    seller: {
+      id: 'sel_ngo_01',
+      name: 'Vidya Jyoti Book Bank (Community Non-Profit)',
+      email: 'bookbank@vidyajyoti.org',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
+      rating: 5.0,
+      reviewsCount: 194,
+      location: 'Pune / Pan-India dispatch',
+      campusOrSchool: 'Community Book Donation Hub',
+      isVerifiedStudent: false,
+      isVerifiedSeller: true,
+      memberSince: '2022'
+    },
+    location: 'Pune / Mumbai (Free pickup or nominal postal fee)',
+    forSale: true,
+    forExchange: false,
+    isFreeDonation: true,
+    isbn: '978-81-7450-492-0',
+    edition: '2023 Edition',
+    language: 'English',
+    pageCount: 240,
+    tags: ['Free Books', 'Class 9', 'NCERT', 'Science', 'Donation'],
+    createdAt: '5 hours ago',
+    status: 'available'
+  },
+  // 6. Novel - Fiction / Classic
+  {
+    id: 'bk_nov_01',
+    title: 'To Kill a Mockingbird (Special 60th Anniversary Edition)',
+    author: 'Harper Lee',
+    coverImage: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'novel',
+    subcategory: 'Classic Fiction',
+    description: 'A timeless exploration of empathy, justice, and humanity in the American South through the eyes of young Scout Finch. Special commemorative cloth-bound cover.',
+    originalPrice: 499,
+    sellingPrice: 175,
+    condition: 'Like New',
+    conditionNotes: 'Read once, stored on shelf, clean bookmark ribbon included.',
+    seller: {
+      id: 'sel_meera_04',
+      name: 'Meera Sen',
+      email: 'meera.sen@example.com',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=200&q=80',
+      rating: 4.95,
+      reviewsCount: 42,
+      location: 'Salt Lake, Kolkata',
+      campusOrSchool: 'Jadavpur University Literature Club',
+      isVerifiedStudent: true,
+      isVerifiedSeller: true,
+      memberSince: '2023'
+    },
+    location: 'Kolkata (Coffee house meetup or India Post)',
+    forSale: true,
+    forExchange: true,
+    isFreeDonation: false,
+    exchangeWishlist: ['The God of Small Things by Arundhati Roy', '1984 by George Orwell'],
+    isbn: '978-00-60935-46-7',
+    edition: 'Anniversary Hardcover',
+    language: 'English',
+    pageCount: 336,
+    tags: ['Classics', 'Literature', 'Fiction', 'Pulitzer Prize'],
+    createdAt: '1 day ago',
+    status: 'available'
+  },
+  // 7. Novel - Sci-Fi / Fantasy
+  {
+    id: 'bk_nov_02',
+    title: 'Dune (Deluxe Hardcover Collector Edition)',
+    author: 'Frank Herbert',
+    coverImage: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'novel',
+    subcategory: 'Science Fiction',
+    description: 'Set on the desert planet Arrakis, Dune tells the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world. Deluxe edition with colored edge paper and map poster.',
+    originalPrice: 1200,
+    sellingPrice: 490,
+    condition: 'Like New',
+    conditionNotes: 'Collector condition with original dust jacket and pull-out map of Arrakis.',
+    seller: {
+      id: 'sel_priya_02',
+      name: 'Priya Sundaram',
+      email: 'priya.s@example.com',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+      rating: 5.0,
+      reviewsCount: 64,
+      location: 'Bengaluru',
+      campusOrSchool: 'IIT Madras',
+      isVerifiedStudent: true,
+      isVerifiedSeller: true,
+      memberSince: '2023'
+    },
+    location: 'Bengaluru',
+    forSale: true,
+    forExchange: true,
+    isFreeDonation: false,
+    exchangeWishlist: ['The Three-Body Problem by Cixin Liu', 'Hyperion by Dan Simmons'],
+    isbn: '978-05-93099-32-2',
+    edition: 'Deluxe Hardcover',
+    language: 'English',
+    pageCount: 688,
+    tags: ['Sci-Fi', 'Dune', 'Space Opera', 'Hardcover', 'Collector'],
+    createdAt: '3 days ago',
+    status: 'available'
+  },
+  // 8. Comic & Manga - Japanese Manga
+  {
+    id: 'bk_com_01',
+    title: 'Death Note: Complete All-in-One Edition',
+    author: 'Tsugumi Ohba & Takeshi Obata',
+    coverImage: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'comic',
+    subcategory: 'Manga',
+    description: 'All 12 volumes and 2,400 pages of the legendary psychological thriller manga collected into a single, beautifully bound black-edge compendium.',
+    originalPrice: 1800,
+    sellingPrice: 750,
+    condition: 'Very Good',
+    conditionNotes: 'Corners clean, silver spine lettering crisp, read twice with utmost care.',
+    seller: {
+      id: 'sel_karan_05',
+      name: 'Karan Malhotra',
+      email: 'karan.m@example.com',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+      rating: 4.88,
+      reviewsCount: 31,
+      location: 'Bandra, Mumbai',
+      campusOrSchool: 'Mumbai Manga & Anime Society',
+      isVerifiedStudent: true,
+      isVerifiedSeller: true,
+      memberSince: '2023'
+    },
+    location: 'Mumbai (Western Line / Bandra / Andheri)',
+    forSale: true,
+    forExchange: true,
+    isFreeDonation: false,
+    exchangeWishlist: ['Berserk Deluxe Vol 1', 'Vinland Saga Book 1', 'Monster Perfect Edition'],
+    isbn: '978-14-21598-10-9',
+    edition: 'All-in-One Edition',
+    language: 'English / Translated',
+    pageCount: 2400,
+    tags: ['Manga', 'Death Note', 'Psychological', 'Shonen Jump', 'Thriller'],
+    createdAt: '1 day ago',
+    status: 'available'
+  },
+  // 9. Comic - Superhero Graphic Novel
+  {
+    id: 'bk_com_02',
+    title: 'Batman: The Long Halloween (DC Modern Classics)',
+    author: 'Jeph Loeb & Tim Sale',
+    coverImage: 'https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'comic',
+    subcategory: 'Graphic Novels',
+    description: 'The definitive Batman detective mystery spanning an entire year of Gotham mob murders. The direct inspiration for Christopher Nolan’s The Dark Knight film.',
+    originalPrice: 1100,
+    sellingPrice: 420,
+    condition: 'Like New',
+    conditionNotes: 'Pristine gloss pages, stored in acid-free comic bag.',
+    seller: {
+      id: 'sel_karan_05',
+      name: 'Karan Malhotra',
+      email: 'karan.m@example.com',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+      rating: 4.88,
+      reviewsCount: 31,
+      location: 'Mumbai',
+      campusOrSchool: 'Mumbai Anime & Comic Guild',
+      isVerifiedStudent: true,
+      isVerifiedSeller: true,
+      memberSince: '2023'
+    },
+    location: 'Mumbai / Courier delivery nationwide',
+    forSale: true,
+    forExchange: true,
+    isFreeDonation: false,
+    exchangeWishlist: ['Watchmen by Alan Moore', 'Spider-Man Blue'],
+    isbn: '978-14-01232-59-7',
+    edition: 'DC Comics Graphic Novel',
+    language: 'English',
+    pageCount: 384,
+    tags: ['DC Comics', 'Batman', 'Graphic Novel', 'Detective', 'Art'],
+    createdAt: '4 days ago',
+    status: 'available'
+  },
+  // 10. Self-Published / Indie Novel
+  {
+    id: 'bk_pub_01',
+    title: 'The Silent Clocktower of Chandni Chowk',
+    author: 'Suniti Banerjee (Indie Author)',
+    coverImage: 'https://images.unsplash.com/photo-1476275466078-4007374efbbe?auto=format&fit=crop&w=600&q=80',
+    mainCategory: 'published',
+    subcategory: 'Historical Mystery',
+    description: 'Original historical mystery novel published independently on The Book Exchange. Set in 1932 old Delhi, where a reclusive horologist uncovers a clandestine freedom-movement telegraph machine hidden inside the market clocktower.',
+    originalPrice: 299,
+    sellingPrice: 149,
+    condition: 'Brand New',
+    conditionNotes: 'Author direct print-on-demand & digital eBook package. Includes digital reading access.',
+    seller: {
+      id: 'sel_author_suniti',
+      name: 'Suniti Banerjee',
+      email: 'suniti.author@gmail.com',
+      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
+      rating: 5.0,
+      reviewsCount: 18,
+      location: 'Old Delhi / Digital worldwide',
+      campusOrSchool: 'Independent Historian & Writer',
+      isVerifiedStudent: false,
+      isVerifiedSeller: true,
+      memberSince: '2024'
+    },
+    location: 'Delhi / Digital download worldwide',
+    forSale: true,
+    forExchange: false,
+    isFreeDonation: false,
+    digitalAvailable: true,
+    digitalSampleContent: `CHAPTER ONE: THE PENDULUM IN THE SMOKE\n\nThe chime struck thirteen times—a brazen impossibility that caused old Master Gagan to drop his copper tweezers onto the felt work-cloth.\n\nOutside, the monsoon dusk of Chandni Chowk smelled of roasted cumin, wet limestone, and coal exhaust from the distant railway siding. Gagan stood motionless beneath the cavernous teak arches of his clock shop. The clock on his cedar mantlepiece read half-past six. But from overhead, deep inside the municipal clocktower that had towered over the spice bazaar since the British municipal charter of 1887, a hollow fourteenth vibration shuddered down the stone pillar.\n\n"Thirteen was a mistake," whispered his apprentice, Shambhu, peering up through the skylight. "Fourteen is a telegraph."\n\nUnderneath the copper bevel gear, nestled in a niche that neither the city surveyor nor the police inspectors had noticed in forty years, lay an insulated German wire running straight down into the bazaar gutters. The freedom press was running again...`,
+    edition: '1st Author Edition',
+    language: 'English',
+    pageCount: 220,
+    tags: ['Indie Author', 'Historical Mystery', 'Delhi', 'Self-Published', 'Fiction'],
+    createdAt: '6 days ago',
+    status: 'available'
+  }
+];
+
+export const mockStudyMaterials: StudyMaterial[] = [
+  {
+    id: 'mat_01',
+    title: 'Class 10 CBSE Science: Complete Chapter-wise Handwritten Formula & Revision Notes',
+    board: 'CBSE',
+    classLevel: 'Class 10',
+    subject: 'Science',
+    chapter: 'All Chapters (Electricity, Carbon Compounds, Chemical Reactions, Life Processes)',
+    materialType: 'Handwritten Notes',
+    uploaderName: 'Er. Rajesh Gupta',
+    uploaderRole: 'Teacher',
+    uploaderAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
+    rating: 4.9,
+    downloadsCount: 14200,
+    pageCount: 48,
+    fileSize: '4.8 MB',
+    description: 'Gold medalist teacher’s concise handwritten notes with color-coded diagrams, circuit diagrams for Ohm’s law, and mind maps for quick 1-hour board revision.',
+    previewSnippet: `• Ohm's Law: V = I × R (Potential difference is directly proportional to current through conductor at constant temperature).\n• Resistivity (ρ): Depends only on material and temperature, independent of length or area. Units: Ω·m.\n• Focal Length of spherical mirror: f = R / 2.\n• Mirror Formula: 1/f = 1/v + 1/u.\n• Lens Formula: 1/f = 1/v - 1/u.\n• Saponification: Reaction of ester with NaOH yields soap (sodium carboxylate) + alcohol.`,
+    fullContent: `COMPREHENSIVE CBSE CLASS 10 SCIENCE REVISION DOSSIER\n\nChapter 1: Chemical Reactions and Equations\n- Combination: A + B -> AB (e.g. CaO + H2O -> Ca(OH)2 + Heat [Exothermic])\n- Decomposition: 2FeSO4 -> Fe2O3 + SO2 + SO3 (Thermal)\n- Displacement: Fe + CuSO4 (blue) -> FeSO4 (light green) + Cu (brown)\n- Double Displacement: Na2SO4 + BaCl2 -> BaSO4 (white ppt) + 2NaCl\n- Redox: Oxidation is gain of O or loss of H. Reduction is loss of O or gain of H.\n\nChapter 2: Acids, Bases and Salts\n- pH Scale: <7 Acidic, 7 Neutral, >7 Basic. Blood pH = 7.35 - 7.45.\n- Bleaching Powder: CaOCl2 (formed by action of Cl2 on dry slaked lime).\n- Baking Soda: NaHCO3 (used in antacids and fire extinguishers).\n- Washing Soda: Na2CO3·10H2O (Recrystallization of sodium carbonate).\n- Plaster of Paris: CaSO4·1/2H2O (Prepared by heating gypsum at 373 K).\n\nChapter 12: Electricity\n- Electric Charge: Q = n × e (e = 1.6 × 10^-19 C)\n- Current: I = Q / t (Ampere)\n- Potential Difference: V = W / Q (Volt)\n- Resistance Factors: R = ρ (l / A)\n- Series Connection: R_eq = R1 + R2 + R3 (Current remains same throughout)\n- Parallel Connection: 1/R_eq = 1/R1 + 1/R2 + 1/R3 (Potential difference remains same)`,
+    verifiedByTeacher: true,
+    uploadedAt: 'Oct 2024'
+  },
+  {
+    id: 'mat_02',
+    title: 'Class 12 Physics: Derivations Master Sheet for Board Examination 2025',
+    board: 'CBSE',
+    classLevel: 'Class 12',
+    subject: 'Physics',
+    chapter: 'Electrostatics, Optics & Magnetism',
+    materialType: 'Formula Sheets & Cheats',
+    uploaderName: 'Aman Singhal (AIR 142 JEE)',
+    uploaderRole: 'Ranker Student',
+    uploaderAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+    rating: 4.95,
+    downloadsCount: 19800,
+    pageCount: 32,
+    fileSize: '3.2 MB',
+    description: 'Every single 5-mark and 3-mark derivation required for CBSE Class 12 Physics: Gauss Theorem, Cyclotron, Transformer, Young Double Slit Experiment, Lens Maker Formula.',
+    previewSnippet: `1. Electric Field due to infinite wire: E = λ / (2πε₀r)\n2. Electric Field due to infinite sheet: E = σ / (2ε₀)\n3. Lens Maker's Formula: 1/f = (μ - 1)(1/R1 - 1/R2)\n4. Prism Refractive Index: μ = sin((A + Dm)/2) / sin(A/2)\n5. De Broglie Wavelength: λ = h / p = h / √(2mE)`,
+    verifiedByTeacher: true,
+    uploadedAt: 'Sep 2024'
+  },
+  {
+    id: 'mat_03',
+    title: 'ICSE Class 10 Mathematics: 10-Year Solved Question Papers with Step-by-Step Marking Scheme',
+    board: 'ICSE',
+    classLevel: 'Class 10',
+    subject: 'Mathematics',
+    chapter: 'Commercial Maths, Algebra, Geometry, Mensuration',
+    materialType: 'Previous Year Papers',
+    uploaderName: 'Sister Maria Teresa (Senior Math Faculty)',
+    uploaderRole: 'Teacher',
+    uploaderAvatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&w=200&q=80',
+    rating: 4.85,
+    downloadsCount: 8900,
+    pageCount: 110,
+    fileSize: '9.4 MB',
+    description: 'Fully solved ICSE Board papers with examiner tips on avoiding common calculation pitfalls in GST, Banking recurring deposits, quadratic equations, and circles.',
+    previewSnippet: `• GST Calculation: Input Tax Credit (ITC) = Tax paid on purchase. Tax payable = Output tax - ITC.\n• Recurring Deposit: I = P × [n(n+1) / (2 × 12)] × (r / 100). Maturity Value = (P × n) + I.\n• Section Formula: x = (m1*x2 + m2*x1)/(m1 + m2), y = (m1*y2 + m2*y1)/(m1 + m2).`,
+    verifiedByTeacher: true,
+    uploadedAt: 'Aug 2024'
+  },
+  {
+    id: 'mat_04',
+    title: 'UP Board Class 12 Hindi: General Hindi & Literature Model Papers & Vyakarana Notes',
+    board: 'UP Board',
+    classLevel: 'Class 12',
+    subject: 'Hindi',
+    chapter: 'Padyansh, Gadyansh, Ras, Chhand, Alankar',
+    materialType: 'Chapter-wise Notes',
+    uploaderName: 'Pandit Ramakant Mishra',
+    uploaderRole: 'Professor',
+    uploaderAvatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=200&q=80',
+    rating: 4.7,
+    downloadsCount: 6300,
+    pageCount: 42,
+    fileSize: '3.6 MB',
+    description: 'Comprehensive Hindi Sahitya model questions, summary of poems by Jaishankar Prasad and Ramdhari Singh Dinkar, grammar rules with examples.',
+    previewSnippet: `रस के चार अंग: स्थायी भाव, विभाव, अनुभाव, संचारी भाव।\nअलंकार: शब्दालंकार (अनुप्रास, यमक, श्लेष) एवं अर्थालंकार (उपमा, रूपक, उत्प्रेक्षा, भ्रांतिमान)।`,
+    verifiedByTeacher: true,
+    uploadedAt: 'Nov 2024'
+  },
+  {
+    id: 'mat_05',
+    title: 'Data Structures & Algorithms: Berkeley CS61B Semester Problem Sets & Solutions',
+    board: 'College / University',
+    classLevel: 'Undergraduate (UG)',
+    subject: 'Computer Science',
+    chapter: 'Binary Trees, Heaps, HashTables, Dijkstra Algorithm',
+    materialType: 'Assignments & Worksheets',
+    uploaderName: 'Devika Krishnan',
+    uploaderRole: 'Ranker Student',
+    uploaderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    rating: 5.0,
+    downloadsCount: 11200,
+    pageCount: 65,
+    fileSize: '5.1 MB',
+    description: 'Actual college midterms, assignment writeups, and pseudocode walkthroughs for asymptotic complexity, AVL rotations, and graph shortest paths.',
+    previewSnippet: `class MinHeap:
+  def __init__(self):
+    self.heap = []
+  def parent(self, i): return (i - 1) // 2
+  def left(self, i): return 2 * i + 1
+  def right(self, i): return 2 * i + 2
+  # Percolate up takes O(log N) worst-case time...`,
+    verifiedByTeacher: true,
+    uploadedAt: 'Jul 2024'
+  }
+];
+
+export const mockCreatorChannels: CreatorChannel[] = [
+  {
+    id: 'chan_sharma_phys',
+    name: 'Sharma Sir Physics Hub',
+    handle: '@SharmaPhysicsCBSE',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
+    bannerImage: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80',
+    description: 'Simplifying Class 9-12 Physics and JEE Concepts through real-life lab demonstrations, interactive experiments, and formula memory hacks.',
+    subscribersCount: 185000,
+    totalViews: 4200000,
+    videosCount: 142,
+    verified: true,
+    playlists: [
+      { title: 'Class 12 Physics Complete Boards 2025', count: 32, cover: 'https://images.unsplash.com/photo-1532012164546-f432f2e3777f?auto=format&fit=crop&w=400&q=80' },
+      { title: 'Practical Lab Experiments in 10 Mins', count: 18, cover: 'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=400&q=80' }
+    ]
+  },
+  {
+    id: 'chan_math_pulse',
+    name: 'MathPulse Academy',
+    handle: '@MathPulseLive',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    bannerImage: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=1200&q=80',
+    description: 'Master calculus, linear algebra, and board exam proofs with zero fear. Daily problem-solving drills and live doubt sessions.',
+    subscribersCount: 94000,
+    totalViews: 2100000,
+    videosCount: 88,
+    verified: true,
+    playlists: [
+      { title: 'Calculus from Zero to Hero', count: 24, cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=400&q=80' }
+    ]
+  },
+  {
+    id: 'chan_career_compass',
+    name: 'Career & College Compass',
+    handle: '@CampusCompass',
+    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+    bannerImage: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80',
+    description: 'Guiding high school and college students through admissions, entrance tests (CUET, JEE, NEET, CLAT), scholarship applications, and interview tips.',
+    subscribersCount: 62000,
+    totalViews: 1450000,
+    videosCount: 54,
+    verified: true,
+    playlists: [
+      { title: 'After 12th Career Roadmaps', count: 15, cover: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=400&q=80' }
+    ]
+  }
+];
+
+export const mockEducationalVideos: EducationalVideo[] = [
+  {
+    id: 'vid_01',
+    title: 'Electromagnetic Induction & Lenz’s Law in 15 Minutes | Visual Experiment Demo',
+    description: 'Watch copper pipe and neodymium magnet demonstrate Lenz’s Law in real-time. We also derive Faraday’s second law of induction and solve 3 previous board exam questions.',
+    thumbnail: 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=600&q=80',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    creatorName: 'Sharma Sir Physics Hub',
+    creatorAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
+    creatorChannelId: 'chan_sharma_phys',
+    board: 'CBSE',
+    classLevel: 'Class 12',
+    subject: 'Physics',
+    chapter: 'Electromagnetic Induction',
+    category: 'Practical Experiment',
+    duration: '15:24',
+    views: 48900,
+    likes: 3820,
+    uploadedAt: '2 weeks ago',
+    chapters: [
+      { time: '00:00', title: 'Introduction & Apparatus' },
+      { time: '03:15', title: 'Live Copper Pipe Drop Demonstration' },
+      { time: '07:40', title: 'Derivation of Induced EMF (ε = -dΦ/dt)' },
+      { time: '12:10', title: 'Sample Board Questions Solved' }
+    ],
+    comments: [
+      {
+        id: 'c_01',
+        userName: 'Tanmay Joshi',
+        userAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=100&q=80',
+        userBadge: 'Class 12 Student',
+        comment: 'Sir the eddy currents visual explanation made this concept crystal clear for my physics practicals tomorrow!',
+        createdAt: '3 days ago',
+        likes: 42
+      },
+      {
+        id: 'c_02',
+        userName: 'Shalini Roy',
+        userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
+        userBadge: 'CBSE Aspirant',
+        comment: 'Thank you for keeping all education free and high quality on this platform.',
+        createdAt: '1 day ago',
+        likes: 18
+      }
+    ]
+  },
+  {
+    id: 'vid_02',
+    title: 'Definite Integrals & Properties Shortcut Tricks for Class 12 Boards & JEE',
+    description: 'King’s Property, Queen’s Property, and periodic function integration tricks simplified with 6 exemplar problems solved live.',
+    thumbnail: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=600&q=80',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    creatorName: 'MathPulse Academy',
+    creatorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    creatorChannelId: 'chan_math_pulse',
+    board: 'CBSE',
+    classLevel: 'Class 12',
+    subject: 'Mathematics',
+    chapter: 'Integrals',
+    category: 'Revision',
+    duration: '22:18',
+    views: 31200,
+    likes: 2450,
+    uploadedAt: '1 month ago',
+    chapters: [
+      { time: '00:00', title: 'Why Properties of Integrals matter' },
+      { time: '04:30', title: 'The King’s Rule: f(a+b-x)' },
+      { time: '11:15', title: 'Symmetric Bounds & Odd/Even Functions' },
+      { time: '18:00', title: 'Top 3 Repeated Board Questions' }
+    ],
+    comments: [
+      {
+        id: 'c_03',
+        userName: 'Vivek Rawat',
+        userAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=100&q=80',
+        userBadge: 'JEE 2025 Aspirant',
+        comment: 'The King rule substitution shortcut saved me 10 minutes on mock test!',
+        createdAt: '5 days ago',
+        likes: 29
+      }
+    ]
+  },
+  {
+    id: 'vid_03',
+    title: 'Top 10 High-Paying Career Options After 12th (Science, Commerce, Arts)',
+    description: 'Comprehensive unbiased overview of emerging fields: AI Engineering, Actuarial Science, Design & UI/UX, Corporate Law, Data Analytics, and Civil Services.',
+    thumbnail: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=600&q=80',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    creatorName: 'Career & College Compass',
+    creatorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+    creatorChannelId: 'chan_career_compass',
+    classLevel: 'Class 12',
+    subject: 'Career Guidance',
+    chapter: 'Admissions & Roadmaps',
+    category: 'Career Guidance',
+    duration: '18:45',
+    views: 78500,
+    likes: 6100,
+    uploadedAt: '3 weeks ago',
+    chapters: [
+      { time: '00:00', title: 'Overview of College Landscape' },
+      { time: '04:10', title: 'Tech & Applied Sciences' },
+      { time: '09:20', title: 'Commerce, Finance & Actuarial' },
+      { time: '14:00', title: 'Liberal Arts, Law & Design' }
+    ],
+    comments: []
+  }
+];
+
+export const mockPublishedWorks: PublishedWork[] = [
+  {
+    id: 'pub_01',
+    title: 'The Silent Clocktower of Chandni Chowk',
+    authorName: 'Suniti Banerjee',
+    authorBio: 'Historian, essayist, and debut historical mystery novelist based in Delhi. Passionate about archival rediscovery.',
+    authorAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
+    authorId: 'sel_author_suniti',
+    genre: 'Historical Mystery',
+    category: 'Novel',
+    description: 'Set in 1932 old Delhi, where a reclusive clockmaker uncovers a clandestine freedom-movement telegraph machine inside the municipal clocktower.',
+    coverImage: 'https://images.unsplash.com/photo-1476275466078-4007374efbbe?auto=format&fit=crop&w=600&q=80',
+    manuscriptText: `PROLOGUE: THE CHANDNI NIGHTS\n\nBefore the electric cables crisscrossed the city sky like spiderwebs, the city lived by three sounds: the muezzin’s dawn call from Jama Masjid, the brass gong of the British garrison across the Yamuna, and the brass clocktower at the intersection of Fatehpuri.\n\nMaster Gagan had tended that clock since the Coronation Durbar of 1911. He knew every tooth of its eighty-four gears. But on the rainy Tuesday of August 9th, the clock struck thirteen.\n\nCHAPTER 1: THE FOURTEENTH TOLL\n\n"A clock that tells thirteen lies twice," Gagan said, dipping a goose feather in machine lubricant. "A clock that tells fourteen is talking to somebody."\n\nBeside him, nineteen-year-old Shambhu wiped oil from his palms. "The police inspector from Kotwali came by at noon, Master. He was asking if anyone had keys to the attic staircase behind the face."\n\n"And what did you say?"\n\n"I told him the termites ate the door thirty years ago."\n\nGagan smiled beneath his gray mustache, but his fingers trembled slightly as he picked up a small silver cipher key stamped with a three-leaf rosette...`,
+    pageCount: 220,
+    isFree: false,
+    price: 149,
+    status: 'published',
+    likesCount: 342,
+    readsCount: 1840,
+    reviewsCount: 46,
+    publishedAt: 'Oct 2024',
+    tags: ['Historical', 'Mystery', 'Independence Era', 'Delhi']
+  },
+  {
+    id: 'pub_02',
+    title: 'Chronicles of the Cyber-Sadhu: Neo-Varanasi 2099',
+    authorName: 'Vikramaditya Roy & Studio Moksha',
+    authorBio: 'Comic artist duo mixing Indian mythology, cybernetics, and gritty noir graphic storytelling.',
+    authorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    authorId: 'usr_vikram_comic',
+    genre: 'Sci-Fi Cyberpunk Manga',
+    category: 'Manga',
+    description: 'In the year 2099, the ancient ghats of Varanasi are submerged in bioluminescent neon. A bionic ascetic must protect the world’s last neural memories of pure Sanskrit Vedic algorithms from corporate data harvesters.',
+    coverImage: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80',
+    samplePanels: [
+      'https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?auto=format&fit=crop&w=600&q=80',
+      'https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?auto=format&fit=crop&w=600&q=80'
+    ],
+    manuscriptText: `PANEL 1 (SPLASH PAGE): Aerial view of Neo-Varanasi. Holographic diyas float 300 meters above the glowing holy river. Quantum river barges drift quietly through smog permeated with incense and ozone.\n\nPANEL 2: Close-up on AGHORI-9. Half his face is weathered sienna skin, the other half gleaming matte-black titanium with an ocular lens flickering crimson.\n\nPANEL 3: AGHORI-9 speaks: "Data is dust. Memory is water. You cannot compress the eternal."\n\nPANEL 4: High-speed chase through the serpentine alleyways of Vishwanath Corridor. Drones with sonic disruptors shatter the neon glass shopfronts...`,
+    pageCount: 64,
+    isFree: true,
+    price: 0,
+    status: 'published',
+    likesCount: 680,
+    readsCount: 3900,
+    reviewsCount: 89,
+    publishedAt: 'Sep 2024',
+    tags: ['Cyberpunk', 'Graphic Novel', 'Varanasi', 'Comics', 'Manga']
+  },
+  {
+    id: 'pub_03',
+    title: 'The Organic Chemistry Pocket Atlas for Pre-Med',
+    authorName: 'Dr. Priya Namboodiri',
+    authorBio: 'Associate Professor of Biochemistry, passionate about open-source academic guides for first-generation students.',
+    authorAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80',
+    authorId: 'usr_priya_prof',
+    genre: 'Medical Education',
+    category: 'Educational Guide',
+    description: 'Visual reaction mechanisms, arrow-pushing logic, and stereochemistry mnemonics designed for rapid exam recall.',
+    coverImage: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=600&q=80',
+    manuscriptText: `PREFACE: WHY ORGANIC CHEMISTRY IS A LANGUAGE, NOT A MEMORY TEST\n\nStudents fail organic chemistry when they try to memorize two thousand disconnected reactions. But chemistry is simply the dance of electrons flowing from regions of high density (nucleophiles) to regions of deficit (electrophiles).\n\nCHAPTER 1: THE NUCLEOPHILIC ATTACK RULE\n\nWhenever you see a carbonyl carbon (C=O), remember: oxygen is greedier for electrons (electronegativity 3.44 vs carbon 2.55). That carbon is desperately begging for electrons. Any species with a lone pair or negative charge will strike that carbon at a 107-degree angle (the Bürgi-Dunitz trajectory)...`,
+    pageCount: 110,
+    isFree: true,
+    price: 0,
+    status: 'published',
+    likesCount: 512,
+    readsCount: 4200,
+    reviewsCount: 72,
+    publishedAt: 'Aug 2024',
+    tags: ['Educational Guide', 'Organic Chemistry', 'Pre-Med', 'Open Access']
+  }
+];
+
+export const mockExchangeProposals: ExchangeProposal[] = [
+  {
+    id: 'prop_01',
+    targetBookId: 'bk_edu_02', // Concepts of Physics
+    targetBook: mockBooks[1],
+    offeredBookIds: ['bk_edu_01'],
+    offeredBooks: [mockBooks[0]],
+    cashAdjustment: 150, // offers Class 10 NCERT + 150 cash for HC Verma
+    message: 'Hi Priya! I have the solved Class 10 NCERT plus I am adding Rs 150 cash difference. Can we meet at Koramangala Starbucks or IIT Gate?',
+    deliveryMethod: 'Campus Handover',
+    meetingPlace: 'IIT Madras In-gate or Koramangala 5th Block',
+    status: 'pending',
+    createdAt: 'Yesterday',
+    proposerId: 'usr_me_01',
+    proposerName: 'Aarav Sharma',
+    proposerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+    targetOwnerId: 'sel_priya_02'
+  },
+  {
+    id: 'prop_02',
+    targetBookId: 'bk_nov_02', // Dune
+    targetBook: mockBooks[6],
+    offeredBookIds: ['bk_nov_01'],
+    offeredBooks: [mockBooks[5]],
+    cashAdjustment: 100,
+    message: 'Hello! I am offering my collector edition of To Kill a Mockingbird plus 100 cash for your Dune Deluxe Hardcover. I keep all books in pristine condition.',
+    deliveryMethod: 'Postal Courier',
+    status: 'accepted',
+    createdAt: '3 days ago',
+    proposerId: 'sel_karan_05',
+    proposerName: 'Karan Malhotra',
+    proposerAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
+    targetOwnerId: 'usr_me_01'
+  }
+];
+
+export const mockChatConversations: ChatConversation[] = [
+  {
+    id: 'chat_01',
+    participantId: 'sel_priya_02',
+    participantName: 'Priya Sundaram',
+    participantAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+    participantRole: 'Freshman at IIT Madras',
+    contextBookTitle: 'Concepts of Physics (HC Verma)',
+    lastMessage: 'Yes, meeting at the campus library quad tomorrow around 4 PM works great for me!',
+    lastTimestamp: '10:45 AM',
+    unreadCount: 1,
+    messages: [
+      {
+        id: 'm_01',
+        senderId: 'usr_me_01',
+        senderName: 'Aarav Sharma',
+        senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        text: 'Hi Priya, is the HC Verma set still available for swap or cash?',
+        timestamp: 'Yesterday 3:15 PM',
+        bookReference: { id: 'bk_edu_02', title: 'Concepts of Physics (HC Verma)', price: 380 }
+      },
+      {
+        id: 'm_02',
+        senderId: 'sel_priya_02',
+        senderName: 'Priya Sundaram',
+        senderAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+        text: 'Hi Aarav! Yes it is. Both Vol 1 and 2 are in great condition with formula notes.',
+        timestamp: 'Yesterday 3:40 PM'
+      },
+      {
+        id: 'm_03',
+        senderId: 'usr_me_01',
+        senderName: 'Aarav Sharma',
+        senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        text: 'Awesome, I sent an exchange proposal with cash adjustment. Could we meet on campus?',
+        timestamp: 'Yesterday 4:02 PM'
+      },
+      {
+        id: 'm_04',
+        senderId: 'sel_priya_02',
+        senderName: 'Priya Sundaram',
+        senderAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
+        text: 'Yes, meeting at the campus library quad tomorrow around 4 PM works great for me!',
+        timestamp: '10:45 AM'
+      }
+    ]
+  },
+  {
+    id: 'chat_02',
+    participantId: 'sel_author_suniti',
+    participantName: 'Suniti Banerjee (Author)',
+    participantAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
+    participantRole: 'Indie Author',
+    contextBookTitle: 'The Silent Clocktower of Chandni Chowk',
+    lastMessage: 'Thank you for reading the sample chapter! The physical signed copies arrive next Monday.',
+    lastTimestamp: 'Yesterday',
+    unreadCount: 0,
+    messages: [
+      {
+        id: 'm_05',
+        senderId: 'usr_me_01',
+        senderName: 'Aarav Sharma',
+        senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+        text: 'Hello Ma’am, loved the prologue of your novel! Will you be releasing a signed print edition?',
+        timestamp: '2 days ago'
+      },
+      {
+        id: 'm_06',
+        senderId: 'sel_author_suniti',
+        senderName: 'Suniti Banerjee',
+        senderAvatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
+        text: 'Thank you for reading the sample chapter! The physical signed copies arrive next Monday.',
+        timestamp: 'Yesterday'
+      }
+    ]
+  }
+];
+
+export const mockNotifications: AppNotification[] = [
+  {
+    id: 'notif_01',
+    type: 'exchange',
+    title: 'Exchange Proposal Accepted!',
+    description: 'Karan Malhotra accepted your book exchange for Dune Deluxe Edition.',
+    timestamp: '2 hours ago',
+    read: false,
+    actionRoute: 'exchange'
+  },
+  {
+    id: 'notif_02',
+    type: 'video',
+    title: 'New Video from Sharma Sir Physics',
+    description: 'New lecture: "Alternating Current LCR Resonance Circuits Solved".',
+    timestamp: '5 hours ago',
+    read: false,
+    actionRoute: 'videos'
+  },
+  {
+    id: 'notif_03',
+    type: 'approval',
+    title: 'Publication Approved by Editorial',
+    description: 'Your submitted study guide has been verified and published to the Study Materials Library.',
+    timestamp: 'Yesterday',
+    read: true,
+    actionRoute: 'publications'
+  },
+  {
+    id: 'notif_04',
+    type: 'like',
+    title: '38 Students downloaded your Notes',
+    description: 'Your Class 12 CS Notes received 5-star ratings from CBSE aspirants.',
+    timestamp: '2 days ago',
+    read: true,
+    actionRoute: 'study'
+  }
+];
+
+export const mockFeedbacks: FeedbackSubmission[] = [
+  {
+    id: 'fb_01',
+    name: 'Ananya Deshmukh',
+    email: 'ananya.d@gmail.com',
+    category: 'Suggestion',
+    rating: 5,
+    message: 'The ability to exchange books directly on campus saved my entire semester budget. Please add an automated campus group notification feature!',
+    submittedAt: 'Yesterday',
+    status: 'Reviewed'
+  },
+  {
+    id: 'fb_02',
+    name: 'Mohd. Zeeshan',
+    email: 'zeeshan.m@yahoo.com',
+    category: 'Idea',
+    rating: 5,
+    message: 'The video lecture integration right next to the study material chapter notes is brilliant. Very easy to understand difficult physics derivations.',
+    submittedAt: '3 days ago',
+    status: 'Reviewed'
+  }
+];

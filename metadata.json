@@ -1,0 +1,6 @@
+{
+  "name": "The Book Exchange",
+  "description": "The premier community marketplace to buy, sell, and exchange books, academic study materials, novels, comics, and discover self-published authors.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -36,6 +36,7 @@ export const Sidebar: React.FC = () => {
     isMobileSidebarOpen,
     setMobileSidebarOpen,
     currentUser,
+    isAuthenticated,
     openAuthModal,
     conversations,
     exchangeProposals,
@@ -58,6 +59,7 @@ export const Sidebar: React.FC = () => {
   ];
 
   const userDeskItems: { id: PageRoute; label: string; icon: React.ReactNode; badge?: number }[] = [
+    { id: 'account', label: 'My Account Hub', icon: <User className="w-5 h-5 text-amber-400" /> },
     { id: 'library', label: 'My Library', icon: <Bookmark className="w-5 h-5" /> },
     { id: 'uploads', label: 'My Uploads (Seller)', icon: <UploadCloud className="w-5 h-5" /> },
     { id: 'channel', label: 'My Channel (Creator)', icon: <Tv className="w-5 h-5" /> },
@@ -67,10 +69,12 @@ export const Sidebar: React.FC = () => {
   ];
 
   const adminAndHelpItems: { id: PageRoute; label: string; icon: React.ReactNode }[] = [
-    { id: 'admin', label: 'Admin Portal', icon: <ShieldCheck className="w-5 h-5 text-amber-500" /> },
+    ...(currentUser.isAdmin || currentUser.isOwner
+      ? [{ id: 'admin' as PageRoute, label: 'Owner & Admin Hub', icon: <ShieldCheck className="w-5 h-5 text-amber-500" /> }]
+      : []),
     { id: 'about', label: 'About & How It Works', icon: <BookOpen className="w-5 h-5" /> },
     { id: 'help', label: 'Help & Support', icon: <HelpCircle className="w-5 h-5" /> },
-    { id: 'settings', label: 'Settings & Roles', icon: <Settings className="w-5 h-5" /> }
+    { id: 'settings', label: 'Settings & Security', icon: <Settings className="w-5 h-5" /> }
   ];
 
   const handleNavClick = (route: PageRoute) => {
@@ -122,35 +126,86 @@ export const Sidebar: React.FC = () => {
 
       {/* User Quick Bar / Sign In */}
       <div className="p-3 border-b border-slate-800/60 bg-slate-950/40">
-        <div className="flex items-center gap-2.5">
-          <img
-            src={currentUser.avatar}
-            alt={currentUser.name}
-            className="w-9 h-9 rounded-full object-cover border border-amber-500/40 flex-shrink-0"
-          />
-          {!isSidebarCollapsed && (
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-slate-100 truncate flex items-center gap-1.5">
-                {currentUser.name}
-                <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono">
-                  {currentUser.isSeller && currentUser.isBuyer ? 'Buyer+Seller' : currentUser.isSeller ? 'Seller' : 'Reader'}
-                </span>
-              </div>
-              <div className="text-[11px] text-slate-400 truncate">
-                {currentUser.boardOrUniversity || currentUser.location}
-              </div>
-            </div>
-          )}
-          {!isSidebarCollapsed && (
-            <button
-              onClick={openAuthModal}
-              className="text-xs px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-medium transition-colors"
-              title="Switch Account or Login"
+        {isAuthenticated ? (
+          <div className="flex items-center gap-2.5">
+            <div
+              onClick={() => handleNavClick('profile')}
+              className="relative cursor-pointer group flex-shrink-0"
+              title="View Public Profile"
             >
-              Switch
-            </button>
-          )}
-        </div>
+              <img
+                src={currentUser.avatar}
+                alt={currentUser.name}
+                className="w-9 h-9 rounded-full object-cover border border-amber-500/40 group-hover:border-amber-400 transition-colors"
+              />
+              {currentUser.isOwner && (
+                <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full flex items-center justify-center text-[8px] text-slate-950 font-bold">
+                  ★
+                </span>
+              )}
+            </div>
+            {!isSidebarCollapsed && (
+              <div
+                onClick={() => handleNavClick('account')}
+                className="min-w-0 flex-1 cursor-pointer hover:opacity-90 transition-opacity"
+              >
+                <div className="text-xs font-semibold text-slate-100 truncate flex items-center gap-1.5">
+                  {currentUser.name}
+                  {currentUser.isOwner ? (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono">
+                      Owner
+                    </span>
+                  ) : currentUser.isSeller ? (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono">
+                      Seller
+                    </span>
+                  ) : (
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-stone-700 text-stone-300 font-mono">
+                      Reader
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-400 truncate">
+                  {currentUser.boardOrUniversity || currentUser.location}
+                </div>
+              </div>
+            )}
+            {!isSidebarCollapsed && (
+              <button
+                onClick={() => handleNavClick('account')}
+                className="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-semibold transition-colors cursor-pointer"
+                title="Account Hub"
+              >
+                Hub
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 flex-shrink-0">
+              <User className="w-5 h-5" />
+            </div>
+            {!isSidebarCollapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-semibold text-slate-200 truncate">
+                  Guest Reader
+                </div>
+                <div className="text-[11px] text-slate-400 truncate">
+                  Sign in to save books
+                </div>
+              </div>
+            )}
+            {!isSidebarCollapsed && (
+              <button
+                onClick={() => handleNavClick('login')}
+                className="text-xs px-2.5 py-1 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold transition-colors cursor-pointer"
+                title="Sign In"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Navigation Scrollable Area */}

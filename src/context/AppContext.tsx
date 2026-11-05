@@ -28,11 +28,171 @@ import {
   mockFeedbacks,
   initialCurrentUser
 } from '../data/mockData';
+import { api } from '../services/api';
+
+export const guestProfile: UserAccount = {
+  id: 'guest_user',
+  name: 'Guest Visitor',
+  email: '',
+  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+  bio: 'Exploring The Book Exchange as a guest.',
+  location: 'India',
+  phone: '',
+  boardOrUniversity: 'Guest Reader',
+  isBuyer: true,
+  isSeller: false,
+  isCreator: false,
+  isAuthor: false,
+  isAdmin: false,
+  isOwner: false,
+  emailVerified: false,
+  status: 'active',
+  reputationPoints: 0,
+  activeRoleView: 'buyer'
+};
+
+export function routeToPath(route: PageRoute): string {
+  switch (route) {
+    case 'home':
+      return '/';
+    case 'browse':
+      return '/browse';
+    case 'study':
+      return '/study';
+    case 'videos':
+      return '/videos';
+    case 'novels':
+      return '/novels';
+    case 'comics':
+      return '/comics';
+    case 'exchange':
+      return '/exchange';
+    case 'publish':
+      return '/publish';
+    case 'free':
+      return '/free';
+    case 'library':
+      return '/library';
+    case 'uploads':
+      return '/uploads';
+    case 'channel':
+      return '/channel';
+    case 'publications':
+      return '/publications';
+    case 'messages':
+      return '/messages';
+    case 'feedback':
+      return '/feedback';
+    case 'admin':
+      return '/admin';
+    case 'about':
+      return '/about';
+    case 'help':
+      return '/help';
+    case 'settings':
+      return '/settings';
+    case 'account':
+      return '/account';
+    case 'login':
+      return '/login';
+    case 'register':
+      return '/register';
+    case 'forgot-password':
+      return '/forgot-password';
+    case 'verify-email':
+      return '/verify-email';
+    case 'profile':
+      return '/profile';
+    case 'dashboard':
+      return '/dashboard';
+    case 'seller-dashboard':
+      return '/seller/dashboard';
+    case 'creator-dashboard':
+      return '/creator/dashboard';
+    case 'author-dashboard':
+      return '/author/dashboard';
+    default:
+      return '/';
+  }
+}
+
+export function pathToRoute(pathname: string): PageRoute {
+  const clean = pathname.toLowerCase().replace(/\/$/, '') || '/';
+  switch (clean) {
+    case '/':
+      return 'home';
+    case '/browse':
+      return 'browse';
+    case '/study':
+      return 'study';
+    case '/videos':
+      return 'videos';
+    case '/novels':
+      return 'novels';
+    case '/comics':
+      return 'comics';
+    case '/exchange':
+      return 'exchange';
+    case '/publish':
+      return 'publish';
+    case '/free':
+      return 'free';
+    case '/library':
+      return 'library';
+    case '/uploads':
+      return 'uploads';
+    case '/channel':
+      return 'channel';
+    case '/publications':
+      return 'publications';
+    case '/messages':
+      return 'messages';
+    case '/feedback':
+      return 'feedback';
+    case '/admin':
+    case '/owner':
+      return 'admin';
+    case '/about':
+      return 'about';
+    case '/help':
+      return 'help';
+    case '/settings':
+      return 'settings';
+    case '/account':
+      return 'account';
+    case '/login':
+      return 'login';
+    case '/register':
+      return 'register';
+    case '/forgot-password':
+      return 'forgot-password';
+    case '/verify-email':
+      return 'verify-email';
+    case '/profile':
+      return 'profile';
+    case '/dashboard':
+      return 'dashboard';
+    case '/seller/dashboard':
+    case '/seller-dashboard':
+      return 'seller-dashboard';
+    case '/creator/dashboard':
+    case '/creator-dashboard':
+      return 'creator-dashboard';
+    case '/author/dashboard':
+    case '/author-dashboard':
+      return 'author-dashboard';
+    default:
+      return 'home';
+  }
+}
 
 interface AppContextType {
-  // Navigation
+  // Navigation & Routing
   currentPage: PageRoute;
   setCurrentPage: (page: PageRoute) => void;
+  returnUrl: PageRoute | null;
+  setReturnUrl: (url: PageRoute | null) => void;
+  navigateWithAuthCheck: (targetRoute: PageRoute) => void;
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
   isMobileSidebarOpen: boolean;
@@ -85,9 +245,16 @@ interface AppContextType {
   openAuthModal: () => void;
   closeAuthModal: () => void;
 
-  // User State
+  // Authentication & Multi-Role State
   currentUser: UserAccount;
   setCurrentUser: React.Dispatch<React.SetStateAction<UserAccount>>;
+  isAuthenticated: boolean;
+  activeRoleView: 'buyer' | 'seller' | 'creator' | 'author' | 'teacher' | 'owner';
+  setActiveRoleView: (role: 'buyer' | 'seller' | 'creator' | 'author' | 'teacher' | 'owner') => void;
+  login: (credentials: { email: string; password: string }) => Promise<{ success: boolean; error?: string; user?: any }>;
+  register: (data: any) => Promise<{ success: boolean; error?: string; user?: any }>;
+  logout: () => Promise<void>;
+  activateOrdinaryRole: (role: 'seller' | 'creator' | 'author' | 'teacher', details?: any) => Promise<{ success: boolean; error?: string }>;
   toggleUserRole: (roleKey: 'isBuyer' | 'isSeller' | 'isCreator' | 'isAuthor' | 'isAdmin') => void;
   loginUser: (email: string, name: string, roleSelection: { isBuyer: boolean; isSeller: boolean; isCreator: boolean; isAuthor: boolean }) => void;
 
@@ -173,11 +340,52 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Navigation
-  const [currentPage, setCurrentPage] = useState<PageRoute>('home');
+  // Navigation & URL Routing
+  const [currentPage, setCurrentPageState] = useState<PageRoute>(() => pathToRoute(window.location.pathname));
+  const [returnUrl, setReturnUrl] = useState<PageRoute | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isMobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [isUniversalSearchOpen, setIsUniversalSearchOpen] = useState<boolean>(false);
+
+  const setCurrentPage = (page: PageRoute) => {
+    setCurrentPageState(page);
+    const targetPath = routeToPath(page);
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState(null, '', targetPath);
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPageState(pathToRoute(window.location.pathname));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateWithAuthCheck = (targetRoute: PageRoute) => {
+    const protectedRoutes: PageRoute[] = [
+      'account',
+      'profile',
+      'settings',
+      'dashboard',
+      'seller-dashboard',
+      'creator-dashboard',
+      'author-dashboard',
+      'library',
+      'uploads',
+      'channel',
+      'publications',
+      'messages',
+      'admin'
+    ];
+    if (protectedRoutes.includes(targetRoute) && !isAuthenticated) {
+      setReturnUrl(targetRoute);
+      setCurrentPage('login');
+    } else {
+      setCurrentPage(targetRoute);
+    }
+  };
 
   // Modals
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -223,15 +431,159 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [darkMode]);
 
-  // Current User with multi-role
+  // Authentication & Multi-Role State
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return Boolean(localStorage.getItem('tbe_auth_token'));
+  });
+
+  const [activeRoleView, setActiveRoleView] = useState<'buyer' | 'seller' | 'creator' | 'author' | 'teacher' | 'owner'>('buyer');
+
   const [currentUser, setCurrentUser] = useState<UserAccount>(() => {
+    const token = localStorage.getItem('tbe_auth_token');
     const saved = localStorage.getItem('tbe_user');
-    return saved ? JSON.parse(saved) : initialCurrentUser;
+    if (token && saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return guestProfile;
+      }
+    }
+    return guestProfile;
   });
 
   useEffect(() => {
-    localStorage.setItem('tbe_user', JSON.stringify(currentUser));
-  }, [currentUser]);
+    if (isAuthenticated) {
+      localStorage.setItem('tbe_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('tbe_user');
+    }
+  }, [currentUser, isAuthenticated]);
+
+  // Synchronize initial state with backend SQLite database
+  useEffect(() => {
+    let isMounted = true;
+    async function syncBackendData() {
+      try {
+        const token = localStorage.getItem('tbe_auth_token');
+        if (token) {
+          const me = await api.getMe().catch(() => null);
+          if (me && me.user && isMounted) {
+            setCurrentUser(me.user);
+            setIsAuthenticated(true);
+          } else {
+            localStorage.removeItem('tbe_auth_token');
+            if (isMounted) {
+              setIsAuthenticated(false);
+              setCurrentUser(guestProfile);
+            }
+          }
+        } else {
+          if (isMounted) {
+            setIsAuthenticated(false);
+            setCurrentUser(guestProfile);
+          }
+        }
+
+        const booksRes = await api.getBooks().catch(() => null);
+        if (booksRes && Array.isArray(booksRes.books) && booksRes.books.length > 0 && isMounted) {
+          setBooks(booksRes.books);
+        }
+
+        const notesRes = await api.getStudyMaterials().catch(() => null);
+        if (notesRes && Array.isArray(notesRes.materials) && notesRes.materials.length > 0 && isMounted) {
+          setStudyMaterials(notesRes.materials);
+        }
+
+        const vidsRes = await api.getVideos().catch(() => null);
+        if (vidsRes && Array.isArray(vidsRes.videos) && vidsRes.videos.length > 0 && isMounted) {
+          setVideos(vidsRes.videos);
+        }
+
+        const pubRes = await api.getPublishedWorks().catch(() => null);
+        if (pubRes && Array.isArray(pubRes.works) && pubRes.works.length > 0 && isMounted) {
+          setPublishedWorks(pubRes.works);
+        }
+
+        const propRes = await api.getExchangeProposals().catch(() => null);
+        if (propRes && Array.isArray(propRes.proposals) && propRes.proposals.length > 0 && isMounted) {
+          setExchangeProposals(propRes.proposals);
+        }
+      } catch (err) {
+        console.warn('Initial backend sync info:', err);
+      }
+    }
+    syncBackendData();
+    return () => { isMounted = false; };
+  }, []);
+
+  const login = async (credentials: { email: string; password: string }) => {
+    try {
+      const res = await api.login(credentials);
+      if (res && res.token && res.user) {
+        localStorage.setItem('tbe_auth_token', res.token);
+        setCurrentUser(res.user);
+        setIsAuthenticated(true);
+        if (returnUrl) {
+          const target = returnUrl;
+          setReturnUrl(null);
+          setCurrentPage(target);
+        } else {
+          setCurrentPage('account');
+        }
+        return { success: true, user: res.user };
+      }
+      return { success: false, error: res?.error || 'Authentication failed' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Login failed' };
+    }
+  };
+
+  const register = async (data: any) => {
+    try {
+      const res = await api.register(data);
+      if (res && res.token && res.user) {
+        localStorage.setItem('tbe_auth_token', res.token);
+        setCurrentUser(res.user);
+        setIsAuthenticated(true);
+        if (returnUrl) {
+          const target = returnUrl;
+          setReturnUrl(null);
+          setCurrentPage(target);
+        } else {
+          setCurrentPage('account');
+        }
+        return { success: true, user: res.user };
+      }
+      return { success: false, error: res?.error || 'Registration failed' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Registration failed' };
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await api.logout().catch(() => {});
+    } finally {
+      localStorage.removeItem('tbe_auth_token');
+      localStorage.removeItem('tbe_user');
+      setIsAuthenticated(false);
+      setCurrentUser(guestProfile);
+      setCurrentPage('account');
+    }
+  };
+
+  const activateOrdinaryRole = async (role: 'seller' | 'creator' | 'author' | 'teacher', details?: any) => {
+    try {
+      const res = await api.activateRole(role, details);
+      if (res && res.user) {
+        setCurrentUser(res.user);
+        return { success: true };
+      }
+      return { success: false, error: res?.error || 'Activation failed' };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Role activation failed' };
+    }
+  };
 
   const toggleUserRole = (roleKey: 'isBuyer' | 'isSeller' | 'isCreator' | 'isAuthor' | 'isAdmin') => {
     setCurrentUser(prev => ({
@@ -285,15 +637,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!currentUser.isSeller) {
       setCurrentUser(prev => ({ ...prev, isSeller: true }));
     }
+    // Asynchronously persist to SQLite
+    api.createBook(newBook).catch((e: any) => console.warn('Sync create book:', e));
     confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
   };
 
   const deleteBook = (id: string) => {
     setBooks(prev => prev.filter(b => b.id !== id));
+    api.deleteBook(id).catch((e: any) => console.warn('Sync delete book:', e));
   };
 
   const updateBookStatus = (id: string, status: Book['status']) => {
     setBooks(prev => prev.map(b => (b.id === id ? { ...b, status } : b)));
+    api.updateBook(id, { status }).catch((e: any) => console.warn('Sync update book status:', e));
   };
 
   // Study Materials
@@ -316,6 +672,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       verifiedByTeacher: true
     };
     setStudyMaterials(prev => [newMat, ...prev]);
+    api.createStudyMaterial(newMat).catch((e: any) => console.warn('Sync study material:', e));
     confetti({ particleCount: 40, spread: 50 });
   };
 
@@ -323,6 +680,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setStudyMaterials(prev =>
       prev.map(m => (m.id === id ? { ...m, downloadsCount: m.downloadsCount + 1 } : m))
     );
+    api.incrementDownload(id).catch((e: any) => console.warn('Sync increment download:', e));
   };
 
   // Videos
@@ -353,6 +711,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!currentUser.isCreator) {
       setCurrentUser(prev => ({ ...prev, isCreator: true }));
     }
+    api.createVideo(newVid).catch((e: any) => console.warn('Sync create video:', e));
     confetti({ particleCount: 50, spread: 60 });
   };
 
@@ -370,21 +729,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return v;
       })
     );
+    api.likeVideo(id).catch((e: any) => console.warn('Sync like video:', e));
   };
 
   const addVideoComment = (videoId: string, commentText: string) => {
+    const newComment = {
+      id: `c_${Date.now()}`,
+      userName: currentUser.name,
+      userAvatar: currentUser.avatar,
+      userBadge: currentUser.boardOrUniversity || 'Student',
+      comment: commentText,
+      createdAt: 'Just now',
+      likes: 0
+    };
     setVideos(prev =>
       prev.map(v => {
         if (v.id === videoId) {
-          const newComment = {
-            id: `c_${Date.now()}`,
-            userName: currentUser.name,
-            userAvatar: currentUser.avatar,
-            userBadge: currentUser.boardOrUniversity || 'Student',
-            comment: commentText,
-            createdAt: 'Just now',
-            likes: 0
-          };
           return {
             ...v,
             comments: [newComment, ...v.comments]
@@ -393,6 +753,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return v;
       })
     );
+    api.addVideoComment(videoId, commentText).catch((e: any) => console.warn('Sync add comment:', e));
   };
 
   const createOrUpdateChannel = (name: string, description: string, handle: string) => {
@@ -499,6 +860,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setCurrentUser(prev => ({ ...prev, isAuthor: true }));
     }
 
+    // Persist to backend
+    api.publishWork(newWork).catch((e: any) => console.warn('Sync publish work:', e));
+    api.createBook(newBookListing).catch((e: any) => console.warn('Sync publish book listing:', e));
+
     confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
   };
 
@@ -506,12 +871,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPublishedWorks(prev =>
       prev.map(p => (p.id === id ? { ...p, status: 'published' } : p))
     );
+    api.updateWorkStatus(id, 'published').catch((e: any) => console.warn('Sync approve work:', e));
   };
 
   const rejectPublication = (id: string) => {
     setPublishedWorks(prev =>
       prev.map(p => (p.id === id ? { ...p, status: 'draft' } : p))
     );
+    api.updateWorkStatus(id, 'draft').catch((e: any) => console.warn('Sync reject work:', e));
   };
 
   // Exchange
@@ -551,6 +918,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setExchangeProposals(prev => [newProposal, ...prev]);
 
+    // Persist to backend SQLite
+    api.createExchangeProposal({
+      targetBookId: targetBook.id,
+      offeredBookIds: offeredBooks.map(b => b.id),
+      cashAdjustment: cashDiff,
+      message,
+      deliveryMethod: delivery,
+      meetingPlace
+    }).catch((e: any) => console.warn('Sync create exchange proposal:', e));
+
     // Send automated chat message to seller
     startChatWithSeller(
       targetBook.seller,
@@ -565,6 +942,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setExchangeProposals(prev =>
       prev.map(p => (p.id === id ? { ...p, status, counterMessage: counterMsg || p.counterMessage } : p))
     );
+    api.updateExchangeProposalStatus(id, status, counterMsg).catch((e: any) => console.warn('Sync proposal status:', e));
   };
 
   // Cart & Orders
@@ -625,6 +1003,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const purchasedBookIds = cartItems.map(c => c.book.id);
     setBooks(prev => prev.map(b => (purchasedBookIds.includes(b.id) ? { ...b, status: 'sold' } : b)));
 
+    // Asynchronously persist to backend SQLite to generate real commission ledger and escrow records
+    cartItems.forEach(item => {
+      api.createOrder({
+        bookId: item.book.id,
+        deliveryAddress: currentUser.location || 'Campus Student Hostel, Delhi University',
+        deliveryPhone: currentUser.phone || '+91 98765 43210',
+        shippingOption: item.shippingOption
+      }).catch((e: any) => console.warn('Sync create backend order:', e));
+    });
+
     clearCart();
     confetti({ particleCount: 80, spread: 80 });
     return { success: true, orderId };
@@ -642,10 +1030,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const toggleWishlist = (bookId: string) => {
     setWishlist(prev => {
-      if (prev.includes(bookId)) {
+      const isAlready = prev.includes(bookId);
+      if (isAlready) {
+        api.removeFromWishlist(bookId).catch((e: any) => console.warn('Sync remove wishlist:', e));
         return prev.filter(id => id !== bookId);
+      } else {
+        api.addToWishlist(bookId).catch((e: any) => console.warn('Sync add wishlist:', e));
+        return [...prev, bookId];
       }
-      return [...prev, bookId];
     });
   };
 
@@ -762,11 +1154,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'New'
     };
     setFeedbacks(prev => [newFb, ...prev]);
+    api.submitFeedback(newFb).catch((e: any) => console.warn('Sync submit feedback:', e));
     confetti({ particleCount: 35, spread: 45 });
   };
 
   const updateFeedbackStatus = (id: string, status: FeedbackSubmission['status']) => {
     setFeedbacks(prev => prev.map(f => (f.id === id ? { ...f, status } : f)));
+    api.updateFeedbackStatus(id, status).catch((e: any) => console.warn('Sync feedback status:', e));
   };
 
   // Search & Global filters
@@ -819,6 +1213,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         currentPage,
         setCurrentPage,
+        returnUrl,
+        setReturnUrl,
+        navigateWithAuthCheck,
         isSidebarCollapsed,
         toggleSidebar,
         isMobileSidebarOpen,
@@ -866,6 +1263,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         currentUser,
         setCurrentUser,
+        isAuthenticated,
+        activeRoleView,
+        setActiveRoleView,
+        login,
+        register,
+        logout,
+        activateOrdinaryRole,
         toggleUserRole,
         loginUser,
 

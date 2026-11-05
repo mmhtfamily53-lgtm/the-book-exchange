@@ -12,21 +12,24 @@ import {
 } from '../types';
 
 export const initialCurrentUser: UserAccount = {
-  id: 'usr_me_01',
-  name: 'Aarav Sharma',
-  email: 'aarav.sharma@bookexchange.org',
+  id: 'usr_owner_01',
+  name: 'Platform Founder (Owner)',
+  email: 'mmhtfamily53@gmail.com',
   avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+  isOwner: true,
+  isAdmin: true,
+  isModerator: true,
   isBuyer: true,
   isSeller: true,
   isCreator: true,
   isAuthor: true,
-  isAdmin: false,
+  isTeacher: true,
   location: 'Connaught Place, New Delhi',
-  boardOrUniversity: 'Delhi University / CBSE Alumnus',
-  phone: '+91 98765 43210',
-  bio: 'Computer Science undergrad & avid reader. Sharing semester notes, trading classic sci-fi novels and publishing technical study primers.',
-  reputationPoints: 480,
-  channelId: 'chan_aarav_01'
+  boardOrUniversity: 'The Book Exchange HQ',
+  phone: '+91 98765 00001',
+  bio: 'Founder and Chief Architect of The Book Exchange. Dedicated to making books, study materials, and knowledge affordable for all students.',
+  reputationPoints: 1000,
+  channelId: 'chan_sharma_phys'
 };
 
 export const mockBooks: Book[] = [

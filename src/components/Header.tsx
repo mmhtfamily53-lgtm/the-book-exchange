@@ -32,6 +32,7 @@ export const Header: React.FC = () => {
     openUploadVideoModal,
     openAuthModal,
     currentUser,
+    isAuthenticated,
     darkMode,
     toggleDarkMode,
     conversations
@@ -234,19 +235,19 @@ export const Header: React.FC = () => {
             )}
           </button>
 
-          {/* User Profile trigger */}
+          {/* User Profile / Account Trigger */}
           <button
-            onClick={openAuthModal}
-            className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full border border-stone-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-400 transition-all bg-stone-50 dark:bg-slate-800"
-            title="User Account & Roles"
+            onClick={() => setCurrentPage('account')}
+            className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full border border-stone-200 dark:border-slate-700 hover:border-amber-500 dark:hover:border-amber-400 transition-all bg-stone-50 dark:bg-slate-800 cursor-pointer shadow-xs"
+            title={isAuthenticated ? `${currentUser.name} (Account Hub)` : 'Sign In / Account Portal'}
           >
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
-              className="w-7 h-7 rounded-full object-cover"
+              className="w-7 h-7 rounded-full object-cover border border-amber-500/30"
             />
-            <span className="hidden lg:inline text-xs font-semibold text-stone-700 dark:text-slate-200">
-              {currentUser.name.split(' ')[0]}
+            <span className="hidden sm:inline text-xs font-semibold text-stone-700 dark:text-slate-200">
+              {isAuthenticated ? currentUser.name.split(' ')[0] : 'Sign In'}
             </span>
           </button>
         </div>

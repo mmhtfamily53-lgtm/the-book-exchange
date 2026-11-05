@@ -38,6 +38,13 @@ import { MessagesPage } from './pages/MessagesPage';
 import { FeedbackPage } from './pages/FeedbackPage';
 import { AdminPage } from './pages/AdminPage';
 import { AboutAndHelpPage } from './pages/AboutAndHelpPage';
+import { AccountPage } from './pages/AccountPage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { SettingsPage } from './pages/SettingsPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 const AppContent: React.FC = () => {
   const { currentPage } = useApp();
@@ -81,7 +88,27 @@ const AppContent: React.FC = () => {
       case 'help':
         return <AboutAndHelpPage initialMode="help" />;
       case 'settings':
-        return <AboutAndHelpPage initialMode="settings" />;
+        return <SettingsPage />;
+      case 'account':
+        return <AccountPage />;
+      case 'login':
+        return <LoginPage />;
+      case 'register':
+        return <RegisterPage />;
+      case 'forgot-password':
+        return <ForgotPasswordPage />;
+      case 'verify-email':
+        return <AccountPage />;
+      case 'profile':
+        return <ProfilePage />;
+      case 'dashboard':
+        return <DashboardPage initialTab="buyer" />;
+      case 'seller-dashboard':
+        return <DashboardPage initialTab="seller" />;
+      case 'creator-dashboard':
+        return <DashboardPage initialTab="creator" />;
+      case 'author-dashboard':
+        return <DashboardPage initialTab="author" />;
       default:
         return <HomePage />;
     }

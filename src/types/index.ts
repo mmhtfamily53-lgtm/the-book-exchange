@@ -17,7 +17,17 @@ export type PageRoute =
   | 'admin'
   | 'about'
   | 'help'
-  | 'settings';
+  | 'settings'
+  | 'account'
+  | 'login'
+  | 'register'
+  | 'forgot-password'
+  | 'verify-email'
+  | 'profile'
+  | 'dashboard'
+  | 'seller-dashboard'
+  | 'creator-dashboard'
+  | 'author-dashboard';
 
 export type BookMainCategory = 'educational' | 'novel' | 'comic' | 'general' | 'published';
 
@@ -239,17 +249,24 @@ export interface UserAccount {
   name: string;
   email: string;
   avatar: string;
+  isOwner?: boolean;
+  isAdmin: boolean;
+  isModerator?: boolean;
   isBuyer: boolean;
   isSeller: boolean;
   isCreator: boolean;
   isAuthor: boolean;
-  isAdmin: boolean;
+  isTeacher?: boolean;
+  emailVerified?: boolean;
+  status?: string;
+  createdAt?: string;
   location: string;
   boardOrUniversity?: string;
   phone?: string;
   bio?: string;
   reputationPoints: number;
   channelId?: string;
+  activeRoleView?: 'buyer' | 'seller' | 'creator' | 'author' | 'teacher' | 'owner';
 }
 
 export interface ChatMessage {

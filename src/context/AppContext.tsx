@@ -29,7 +29,7 @@ import {
   initialCurrentUser
 } from '../data/mockData';
 import { api } from '../services/api';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, getSupabaseConfigError } from '../lib/supabase';
 
 export const guestProfile: UserAccount = {
   id: 'guest_user',
@@ -588,16 +588,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loginWithGoogle = async () => {
     if (!isSupabaseConfigured) {
+      const configError =
+        getSupabaseConfigError() ||
+        'Supabase credentials (VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY) are not configured. Please add them to your environment variables to enable Google authentication.';
       return {
         success: false,
-        error: 'Supabase credentials (VITE_SUPABASE_URL & VITE_SUPABASE_PUBLISHABLE_KEY) are not set. Please add them to your environment to enable Google Sign-In.'
+        error: configError
       };
     }
     try {
+      const redirectUri =
+        typeof window !== 'undefined' && window.location
+          ? `${window.location.origin}/login`
+          : undefined;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/login'
+          redirectTo: redirectUri
         }
       });
       if (error) {

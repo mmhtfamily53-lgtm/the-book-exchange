@@ -29,6 +29,7 @@ import {
   initialCurrentUser
 } from '../data/mockData';
 import { api } from '../services/api';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export const guestProfile: UserAccount = {
   id: 'guest_user',
@@ -252,8 +253,11 @@ interface AppContextType {
   activeRoleView: 'buyer' | 'seller' | 'creator' | 'author' | 'teacher' | 'owner';
   setActiveRoleView: (role: 'buyer' | 'seller' | 'creator' | 'author' | 'teacher' | 'owner') => void;
   login: (credentials: { email: string; password: string }) => Promise<{ success: boolean; error?: string; user?: any }>;
-  register: (data: any) => Promise<{ success: boolean; error?: string; user?: any }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  register: (data: any) => Promise<{ success: boolean; error?: string; user?: any; verificationToken?: string }>;
   logout: () => Promise<void>;
+  resendVerification: (email?: string) => Promise<{ success: boolean; message?: string; error?: string; verificationToken?: string }>;
+  verifyEmail: (token: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   activateOrdinaryRole: (role: 'seller' | 'creator' | 'author' | 'teacher', details?: any) => Promise<{ success: boolean; error?: string }>;
   toggleUserRole: (roleKey: 'isBuyer' | 'isSeller' | 'isCreator' | 'isAuthor' | 'isAdmin') => void;
   loginUser: (email: string, name: string, roleSelection: { isBuyer: boolean; isSeller: boolean; isCreator: boolean; isAuthor: boolean }) => void;
@@ -516,6 +520,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => { isMounted = false; };
   }, []);
 
+  // Auto-synchronize Supabase OAuth sign-ins (e.g. Google Sign-in) with backend SQLite
+  useEffect(() => {
+    if (isSupabaseConfigured) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session && session.user && !localStorage.getItem('tbe_auth_token')) {
+          api.syncSupabaseUser({
+            email: session.user.email || '',
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Google User',
+            avatar: session.user.user_metadata?.avatar_url,
+            supabaseId: session.user.id
+          }).then(res => {
+            if (res && res.user) {
+              setCurrentUser(res.user);
+              setIsAuthenticated(true);
+            }
+          }).catch(err => console.warn('Supabase sync warning:', err));
+        }
+      });
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session && session.user) {
+          try {
+            const res = await api.syncSupabaseUser({
+              email: session.user.email || '',
+              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Google User',
+              avatar: session.user.user_metadata?.avatar_url,
+              supabaseId: session.user.id
+            });
+            if (res && res.user) {
+              setCurrentUser(res.user);
+              setIsAuthenticated(true);
+            }
+          } catch (e) {
+            console.warn('OAuth sync failure:', e);
+          }
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, []);
+
   const login = async (credentials: { email: string; password: string }) => {
     try {
       const res = await api.login(credentials);
@@ -538,6 +586,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const loginWithGoogle = async () => {
+    if (!isSupabaseConfigured) {
+      return {
+        success: false,
+        error: 'Supabase credentials (VITE_SUPABASE_URL & VITE_SUPABASE_PUBLISHABLE_KEY) are not set. Please add them to your environment to enable Google Sign-In.'
+      };
+    }
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/login'
+        }
+      });
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Google sign-in initialization failed.' };
+    }
+  };
+
   const register = async (data: any) => {
     try {
       const res = await api.register(data);
@@ -552,7 +623,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } else {
           setCurrentPage('account');
         }
-        return { success: true, user: res.user };
+        return { success: true, user: res.user, verificationToken: res.verificationToken };
       }
       return { success: false, error: res?.error || 'Registration failed' };
     } catch (err: any) {
@@ -563,12 +634,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logout = async () => {
     try {
       await api.logout().catch(() => {});
+      if (isSupabaseConfigured) {
+        await supabase.auth.signOut().catch(() => {});
+      }
     } finally {
       localStorage.removeItem('tbe_auth_token');
       localStorage.removeItem('tbe_user');
       setIsAuthenticated(false);
       setCurrentUser(guestProfile);
       setCurrentPage('account');
+    }
+  };
+
+  const resendVerification = async (email?: string) => {
+    try {
+      const res = await api.resendVerification(email || currentUser.email);
+      return { success: true, message: res.message, verificationToken: res.verificationToken };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to resend verification email.' };
+    }
+  };
+
+  const verifyEmail = async (token: string) => {
+    try {
+      const res = await api.verifyEmail(token);
+      setCurrentUser(prev => ({ ...prev, emailVerified: true }));
+      return { success: true, message: res.message };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to verify email address.' };
     }
   };
 
@@ -1267,8 +1360,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeRoleView,
         setActiveRoleView,
         login,
+        loginWithGoogle,
         register,
         logout,
+        resendVerification,
+        verifyEmail,
         activateOrdinaryRole,
         toggleUserRole,
         loginUser,

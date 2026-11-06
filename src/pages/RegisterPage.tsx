@@ -33,6 +33,20 @@ export const RegisterPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(['buyer']);
+  const [successInfo, setSuccessInfo] = useState<{ message: string; token?: string } | null>(null);
+
+  const toggleRoleSelection = (role: string) => {
+    setSelectedRoles(prev => {
+      if (prev.includes(role)) {
+        if (prev.length === 1 && prev[0] === 'buyer') return prev; // Keep at least one
+        return prev.filter(r => r !== role);
+      } else {
+        return [...prev, role];
+      }
+    });
+  };
+
   // Password strength calculation
   const getPasswordStrength = () => {
     if (!password) return { score: 0, label: 'None', color: 'bg-stone-200' };
@@ -61,6 +75,7 @@ export const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setSuccessInfo(null);
 
     if (password !== confirmPassword) {
       setError('Passwords do not match. Please re-enter your password.');
@@ -87,11 +102,17 @@ export const RegisterPage: React.FC = () => {
         confirmPassword,
         phone,
         location,
-        boardOrUniversity: campus
+        boardOrUniversity: campus,
+        roles: selectedRoles.length > 0 ? selectedRoles : ['buyer']
       });
 
       if (!result.success) {
         setError(result.error || 'Registration failed. Please verify your details.');
+      } else if (result.verificationToken) {
+        setSuccessInfo({
+          message: 'Account registered successfully! A verification code has been issued for your email.',
+          token: result.verificationToken
+        });
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during account creation.');
@@ -130,6 +151,24 @@ export const RegisterPage: React.FC = () => {
           <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2.5 animate-in fade-in">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {/* Success / Verification Alert */}
+        {successInfo && (
+          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-900 text-emerald-800 dark:text-emerald-200 text-xs space-y-1.5 animate-in fade-in">
+            <div className="flex items-center gap-2 font-bold text-sm">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+              <span>{successInfo.message}</span>
+            </div>
+            {successInfo.token && (
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-mono bg-white dark:bg-slate-900 p-2 rounded-xl border border-emerald-300 dark:border-emerald-800">
+                Verification Token: <span className="font-bold select-all">{successInfo.token}</span>
+              </p>
+            )}
+            <p className="text-[11px] text-stone-500 dark:text-slate-400">
+              You can confirm this token anytime in your Account Portal to unlock unrestricted book listings and author publications.
+            </p>
           </div>
         )}
 
@@ -275,6 +314,105 @@ export const RegisterPage: React.FC = () => {
             </div>
           </div>
 
+          {/* Account Type Selection (Multi-Role Support) */}
+          <div className="pt-2">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-bold text-stone-700 dark:text-slate-300">
+                Account Type & Roles (Select all that apply)
+              </label>
+              <span className="text-[10px] text-stone-400 dark:text-slate-500">
+                Single account, multiple dashboards
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {/* Buyer */}
+              <label
+                className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                  selectedRoles.includes('buyer')
+                    ? 'border-amber-500 bg-amber-500/10 text-amber-900 dark:text-amber-200'
+                    : 'border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-400'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedRoles.includes('buyer')}
+                  onChange={() => toggleRoleSelection('buyer')}
+                  className="w-3.5 h-3.5 rounded text-amber-600 border-stone-300 dark:border-slate-600 focus:ring-amber-500"
+                />
+                <span className="text-xs font-semibold">Buyer / Reader</span>
+              </label>
+
+              {/* Seller */}
+              <label
+                className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                  selectedRoles.includes('seller')
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-900 dark:text-emerald-200'
+                    : 'border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-400'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedRoles.includes('seller')}
+                  onChange={() => toggleRoleSelection('seller')}
+                  className="w-3.5 h-3.5 rounded text-emerald-600 border-stone-300 dark:border-slate-600 focus:ring-emerald-500"
+                />
+                <span className="text-xs font-semibold">Book Seller</span>
+              </label>
+
+              {/* Author */}
+              <label
+                className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                  selectedRoles.includes('author')
+                    ? 'border-purple-500 bg-purple-500/10 text-purple-900 dark:text-purple-200'
+                    : 'border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-400'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedRoles.includes('author')}
+                  onChange={() => toggleRoleSelection('author')}
+                  className="w-3.5 h-3.5 rounded text-purple-600 border-stone-300 dark:border-slate-600 focus:ring-purple-500"
+                />
+                <span className="text-xs font-semibold">Author / Writer</span>
+              </label>
+
+              {/* Teacher */}
+              <label
+                className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                  selectedRoles.includes('teacher')
+                    ? 'border-teal-500 bg-teal-500/10 text-teal-900 dark:text-teal-200'
+                    : 'border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-400'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedRoles.includes('teacher')}
+                  onChange={() => toggleRoleSelection('teacher')}
+                  className="w-3.5 h-3.5 rounded text-teal-600 border-stone-300 dark:border-slate-600 focus:ring-teal-500"
+                />
+                <span className="text-xs font-semibold">Teacher / Tutor</span>
+              </label>
+
+              {/* Creator */}
+              <label
+                className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all sm:col-span-2 ${
+                  selectedRoles.includes('creator')
+                    ? 'border-rose-500 bg-rose-500/10 text-rose-900 dark:text-rose-200'
+                    : 'border-stone-200 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 text-stone-600 dark:text-slate-400'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedRoles.includes('creator')}
+                  onChange={() => toggleRoleSelection('creator')}
+                  className="w-3.5 h-3.5 rounded text-rose-600 border-stone-300 dark:border-slate-600 focus:ring-rose-500"
+                />
+                <span className="text-xs font-semibold">Educational Video Creator</span>
+              </label>
+            </div>
+          </div>
+
           {/* Terms Agreement Checkbox */}
           <div className="pt-2">
             <label className="flex items-start gap-2.5 cursor-pointer">
@@ -294,7 +432,7 @@ export const RegisterPage: React.FC = () => {
                 <span className="text-amber-600 dark:text-amber-400 font-semibold underline">
                   Privacy Policy
                 </span>
-                . I acknowledge that newly created accounts start with standard Buyer permissions, and Seller or Creator features can be activated from Settings.
+                . You can activate or deactivate additional roles anytime from Account Settings without separate logins.
               </span>
             </label>
           </div>

@@ -145,10 +145,38 @@ export const ForgotPasswordPage: React.FC = () => {
             >
               {loading ? 'Processing...' : 'Send Recovery Instructions'}
             </button>
+
+            <div className="pt-2 text-center text-xs text-stone-500 dark:text-slate-400">
+              Already have a recovery token?{' '}
+              <button
+                type="button"
+                onClick={() => setStep('reset')}
+                className="font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+              >
+                Enter Token & Reset
+              </button>
+            </div>
           </form>
         ) : (
           /* Step 2: Set New Password */
           <form onSubmit={handleResetPassword} className="space-y-4 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-xl">
+            <div>
+              <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1.5">
+                Recovery Token
+              </label>
+              <div className="relative">
+                <KeyRound className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+                <input
+                  type="text"
+                  required
+                  placeholder="Paste 64-character reset token"
+                  value={resetToken}
+                  onChange={e => setResetToken(e.target.value)}
+                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-xs text-stone-900 dark:text-slate-100 placeholder:text-stone-400 focus:ring-2 focus:ring-amber-500 outline-none font-mono"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1.5">
                 New Password
@@ -185,11 +213,21 @@ export const ForgotPasswordPage: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !resetToken.trim()}
               className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Updating Password...' : 'Save New Password & Sign In'}
             </button>
+
+            <div className="pt-2 text-center text-xs text-stone-500 dark:text-slate-400">
+              <button
+                type="button"
+                onClick={() => setStep('request')}
+                className="font-semibold text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 underline cursor-pointer"
+              >
+                ← Back to Request Token
+              </button>
+            </div>
           </form>
         )}
       </div>

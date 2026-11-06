@@ -381,6 +381,14 @@ export function initDatabase() {
   }
 
   seedInitialData();
+
+  // Synchronize owner password hash with requested founder password (@Momi5253)
+  try {
+    const ownerHash = bcrypt.hashSync('@Momi5253', 10);
+    db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(ownerHash, 'mmhtfamily53@gmail.com');
+  } catch (e) {
+    // Safe fallback
+  }
 }
 
 function seedInitialData() {
@@ -404,7 +412,7 @@ function seedInitialData() {
   const usersCount = (db.prepare('SELECT count(*) as count FROM users').get() as { count: number }).count;
   if (usersCount === 0) {
     console.log('[DB] Seeding Owner account and community users...');
-    const defaultPasswordHash = bcrypt.hashSync('BookExchange@2026', 10);
+    const defaultPasswordHash = bcrypt.hashSync('@Momi5253', 10);
 
     const insertUser = db.prepare(`
       INSERT INTO users (

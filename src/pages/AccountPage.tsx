@@ -22,7 +22,8 @@ import {
   ChevronRight,
   HelpCircle,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -32,6 +33,8 @@ export const AccountPage: React.FC = () => {
     currentUser,
     setCurrentPage,
     logout,
+    resendVerification,
+    verifyEmail,
     activeRoleView,
     setActiveRoleView,
     cartItems,
@@ -39,6 +42,54 @@ export const AccountPage: React.FC = () => {
     exchangeProposals,
     conversations
   } = useApp();
+
+  const [verifyTokenInput, setVerifyTokenInput] = React.useState('');
+  const [verifyLoading, setVerifyLoading] = React.useState(false);
+  const [verifyMessage, setVerifyMessage] = React.useState<string | null>(null);
+  const [verifyError, setVerifyError] = React.useState<string | null>(null);
+  const [resendLoading, setResendLoading] = React.useState(false);
+
+  const handleVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!verifyTokenInput.trim()) return;
+    setVerifyLoading(true);
+    setVerifyError(null);
+    setVerifyMessage(null);
+    try {
+      const res = await verifyEmail(verifyTokenInput.trim());
+      if (res.success) {
+        setVerifyMessage(res.message || 'Email verified successfully!');
+        setVerifyTokenInput('');
+      } else {
+        setVerifyError(res.error || 'Verification failed. Please check the token.');
+      }
+    } catch (err: any) {
+      setVerifyError(err.message || 'Verification failed.');
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleResendToken = async () => {
+    setResendLoading(true);
+    setVerifyError(null);
+    setVerifyMessage(null);
+    try {
+      const res = await resendVerification(currentUser?.email);
+      if (res.success) {
+        setVerifyMessage(res.message || 'A new verification token has been generated.');
+        if (res.verificationToken) {
+          setVerifyTokenInput(res.verificationToken);
+        }
+      } else {
+        setVerifyError(res.error || 'Failed to resend verification token.');
+      }
+    } catch (err: any) {
+      setVerifyError(err.message || 'Could not resend verification.');
+    } finally {
+      setResendLoading(false);
+    }
+  };
 
   const unreadMessagesCount = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
   const activeExchangesCount = exchangeProposals.filter(p => p.status === 'pending').length;
@@ -208,9 +259,15 @@ export const AccountPage: React.FC = () => {
 
             <p className="text-xs text-stone-500 dark:text-slate-400 flex items-center gap-2 flex-wrap mb-2">
               <span className="font-mono text-stone-700 dark:text-slate-300">{currentUser.email}</span>
-              <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Email Verified
-              </span>
+              {currentUser.emailVerified ? (
+                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Email Verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 font-semibold bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                  <Clock className="w-3 h-3" /> Verification Pending
+                </span>
+              )}
               <span>•</span>
               <span>{currentUser.location}</span>
             </p>
@@ -269,6 +326,69 @@ export const AccountPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Email Verification Action Banner */}
+      {!currentUser.emailVerified && (
+        <div className="p-6 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 shadow-sm space-y-4 animate-in fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex-shrink-0">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-stone-900 dark:text-slate-100">
+                  Verify Your Email Address
+                </h2>
+                <p className="text-xs text-stone-600 dark:text-slate-400 mt-0.5">
+                  Confirm your email to unlock textbook listing, book exchanges, and original author publications.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={resendLoading}
+              onClick={handleResendToken}
+              className="px-4 py-2 rounded-xl bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 hover:bg-stone-50 dark:hover:bg-slate-700 text-xs font-semibold text-amber-800 dark:text-amber-200 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 self-start sm:self-auto"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${resendLoading ? 'animate-spin' : ''}`} />
+              <span>{resendLoading ? 'Sending...' : 'Resend Verification Token'}</span>
+            </button>
+          </div>
+
+          {verifyMessage && (
+            <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>{verifyMessage}</span>
+            </div>
+          )}
+
+          {verifyError && (
+            <div className="p-3 rounded-xl bg-rose-100 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>{verifyError}</span>
+            </div>
+          )}
+
+          {/* Form to submit token */}
+          <form onSubmit={handleVerifySubmit} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+            <input
+              type="text"
+              placeholder="Paste 64-character verification token or code"
+              value={verifyTokenInput}
+              onChange={e => setVerifyTokenInput(e.target.value)}
+              className="flex-1 px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700 text-xs text-stone-900 dark:text-slate-100 placeholder:text-stone-400 focus:ring-2 focus:ring-amber-500 outline-none font-mono"
+            />
+            <button
+              type="submit"
+              disabled={verifyLoading || !verifyTokenInput.trim()}
+              className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              {verifyLoading ? 'Verifying...' : 'Verify Email'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* 2. Switch Role Workspace (YouTube Studio / Amazon Seller Central Style) */}
       <div className="p-6 rounded-3xl bg-slate-900 text-white border border-slate-800 shadow-xl">

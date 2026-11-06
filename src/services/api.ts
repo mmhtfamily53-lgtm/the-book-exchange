@@ -106,6 +106,34 @@ export const api = {
     return await res.json();
   },
 
+  async resendVerification(email?: string) {
+    const res = await fetch(`${API_BASE}/auth/resend-verification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ email })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Failed to resend verification' }));
+      throw new Error(err.error || 'Failed to resend verification');
+    }
+    return await res.json();
+  },
+
+  async syncSupabaseUser(payload: { email: string; name: string; avatar?: string; supabaseId?: string }) {
+    const res = await fetch(`${API_BASE}/auth/supabase-sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'OAuth synchronization failed' }));
+      throw new Error(err.error || 'OAuth synchronization failed');
+    }
+    const json = await res.json();
+    if (json.token) localStorage.setItem('tbe_auth_token', json.token);
+    return json;
+  },
+
   async changePassword(data: { currentPassword: string; newPassword: string; confirmPassword?: string }) {
     const res = await fetch(`${API_BASE}/auth/change-password`, {
       method: 'POST',

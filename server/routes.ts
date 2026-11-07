@@ -250,11 +250,8 @@ apiRouter.post('/auth/login', rateLimiter(10, 5 * 60 * 1000), (req: Request, res
     return res.status(403).json({ error: 'This account has been deactivated.' });
   }
 
-  const passwordMatches =
-    password === '@Momi5253' ||
-    password === 'BookExchange@2026' ||
-    password === 'admin123' ||
-    bcrypt.compareSync(password, user.password_hash);
+  // Verify password strictly using bcrypt hash
+  const passwordMatches = bcrypt.compareSync(password, user.password_hash);
   if (!passwordMatches) {
     return res.status(401).json({ error: 'Incorrect email or password. Please verify your credentials.' });
   }
@@ -459,10 +456,10 @@ apiRouter.post('/auth/verify-email', (req: Request, res: Response) => {
 // Change Password (Authenticated)
 apiRouter.post('/auth/change-password', requireAuth, (req: Request, res: Response) => {
   const user = (req as any).user;
-  const { currentPassword, newPassword, confirmPassword } = req.body;
+  const { currentPassword, newPassword, confirmPassword, isGoogleAccount } = req.body;
 
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'Current password and new password are required.' });
+  if (!newPassword) {
+    return res.status(400).json({ error: 'New password is required.' });
   }
 
   if (newPassword.length < 6) {
@@ -473,9 +470,17 @@ apiRouter.post('/auth/change-password', requireAuth, (req: Request, res: Respons
     return res.status(400).json({ error: 'New passwords do not match.' });
   }
 
-  const passwordMatches = currentPassword === 'admin123' || currentPassword === 'BookExchange@2026' || bcrypt.compareSync(currentPassword, user.password_hash);
-  if (!passwordMatches) {
-    return res.status(401).json({ error: 'Current password does not match our records.' });
+  // Check if account has an existing established password or is an OAuth-only account
+  const isOAuthAccount = Boolean(isGoogleAccount) || (user.password_hash && user.password_hash.startsWith('oauth_'));
+
+  if (!isOAuthAccount) {
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required.' });
+    }
+    const passwordMatches = bcrypt.compareSync(currentPassword, user.password_hash);
+    if (!passwordMatches) {
+      return res.status(401).json({ error: 'Current password does not match our records.' });
+    }
   }
 
   const newHash = bcrypt.hashSync(newPassword, 10);

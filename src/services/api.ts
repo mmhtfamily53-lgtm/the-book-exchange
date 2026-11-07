@@ -134,7 +134,7 @@ export const api = {
     return json;
   },
 
-  async changePassword(data: { currentPassword: string; newPassword: string; confirmPassword?: string }) {
+  async changePassword(data: { currentPassword?: string; newPassword: string; confirmPassword?: string; isGoogleAccount?: boolean }) {
     const res = await fetch(`${API_BASE}/auth/change-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeader() },

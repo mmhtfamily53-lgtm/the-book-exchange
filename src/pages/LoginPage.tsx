@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Lock,
   Mail,
@@ -9,12 +9,25 @@ import {
   AlertCircle,
   CheckCircle2,
   BookOpen,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw,
+  Fingerprint
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { getSupabaseProjectRef } from '../lib/supabase';
 
 export const LoginPage: React.FC = () => {
-  const { login, loginWithGoogle, setCurrentPage, returnUrl } = useApp();
+  const {
+    login,
+    loginWithGoogle,
+    loginWithPasskey,
+    isPasskeySupported,
+    setCurrentPage,
+    returnUrl,
+    isAuthenticated,
+    isAuthLoading,
+    oauthError
+  } = useApp();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +35,39 @@ export const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const projectRef = getSupabaseProjectRef();
+
+  // If already authenticated (e.g. via OAuth completion), redirect immediately
+  useEffect(() => {
+    if (isAuthenticated) {
+      setCurrentPage(returnUrl || 'account');
+    }
+  }, [isAuthenticated, returnUrl, setCurrentPage]);
+
+  // Sync external oauth errors
+  useEffect(() => {
+    if (oauthError) {
+      setError(oauthError);
+    }
+  }, [oauthError]);
+
+  const handlePasskeySignIn = async () => {
+    setError(null);
+    setPasskeyLoading(true);
+    try {
+      const res = await loginWithPasskey();
+      if (!res.success) {
+        setError(res.error || 'Passkey authentication could not be completed.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Passkey sign-in encountered an issue.');
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     setError(null);
@@ -55,6 +100,24 @@ export const LoginPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-xl space-y-4 text-center animate-in fade-in">
+          <div className="flex justify-center">
+            <RefreshCw className="w-8 h-8 text-amber-600 dark:text-amber-400 animate-spin" />
+          </div>
+          <h2 className="text-xl font-bold font-editorial text-stone-900 dark:text-slate-100">
+            Completing Google Authentication...
+          </h2>
+          <p className="text-xs text-stone-500 dark:text-slate-400 leading-relaxed">
+            Exchanging secure credentials and setting up your workspace. You will be redirected momentarily.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
@@ -98,11 +161,31 @@ export const LoginPage: React.FC = () => {
         )}
 
         {/* Login Form */}
-        <div className="mt-8 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-xl space-y-5">
+        <div className="mt-8 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-xl space-y-4">
+          {/* Sign in with Passkey */}
+          <button
+            type="button"
+            disabled={passkeyLoading || googleLoading}
+            onClick={handlePasskeySignIn}
+            className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50 shadow-md shadow-amber-950/20"
+          >
+            {passkeyLoading ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin flex-shrink-0" />
+                <span>Authenticating with Device...</span>
+              </>
+            ) : (
+              <>
+                <Fingerprint className="w-4 h-4 flex-shrink-0" />
+                <span>Sign In with Passkey (Touch ID / Face ID / PIN)</span>
+              </>
+            )}
+          </button>
+
           {/* Real Google OAuth Button */}
           <button
             type="button"
-            disabled={googleLoading}
+            disabled={googleLoading || passkeyLoading}
             onClick={handleGoogleSignIn}
             className="w-full py-3 px-4 rounded-2xl border border-stone-300 dark:border-slate-700 hover:bg-stone-50 dark:hover:bg-slate-800 text-stone-700 dark:text-slate-200 font-semibold text-xs transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50 shadow-sm"
           >
@@ -116,7 +199,7 @@ export const LoginPage: React.FC = () => {
           </button>
 
           {/* Divider */}
-          <div className="relative flex items-center justify-center">
+          <div className="relative flex items-center justify-center pt-1 pb-1">
             <div className="border-t border-stone-200 dark:border-slate-800 w-full" />
             <span className="bg-white dark:bg-slate-900 px-3 text-[11px] font-semibold uppercase tracking-wider text-stone-400 dark:text-slate-500 absolute">
               or sign in with password

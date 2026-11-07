@@ -381,14 +381,6 @@ export function initDatabase() {
   }
 
   seedInitialData();
-
-  // Synchronize owner password hash with requested founder password (@Momi5253)
-  try {
-    const ownerHash = bcrypt.hashSync('@Momi5253', 10);
-    db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(ownerHash, 'mmhtfamily53@gmail.com');
-  } catch (e) {
-    // Safe fallback
-  }
 }
 
 function seedInitialData() {

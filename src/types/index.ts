@@ -23,6 +23,7 @@ export type PageRoute =
   | 'register'
   | 'forgot-password'
   | 'verify-email'
+  | 'auth-callback'
   | 'profile'
   | 'dashboard'
   | 'seller-dashboard'

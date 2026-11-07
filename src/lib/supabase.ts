@@ -92,11 +92,26 @@ export const getSupabaseConfigError = (): string | null => {
 
 export const isSupabaseConfigured: boolean = getSupabaseConfigError() === null;
 
+export function getSupabaseProjectRef(): string | null {
+  if (!supabaseUrl) return null;
+  try {
+    const parsed = new URL(supabaseUrl);
+    const host = parsed.hostname;
+    if (host.endsWith('.supabase.co')) {
+      return host.replace('.supabase.co', '');
+    }
+    return host;
+  } catch {
+    return null;
+  }
+}
+
 export function getSupabaseConfigStatus(): {
   configured: boolean;
   hasUrl: boolean;
   hasKey: boolean;
   error: string | null;
+  projectRef: string | null;
   urlPreview?: string;
 } {
   return {
@@ -104,6 +119,7 @@ export function getSupabaseConfigStatus(): {
     hasUrl: Boolean(supabaseUrl),
     hasKey: Boolean(supabasePublishableKey),
     error: getSupabaseConfigError(),
+    projectRef: getSupabaseProjectRef(),
     urlPreview: supabaseUrl ? (supabaseUrl.length > 28 ? supabaseUrl.slice(0, 28) + '...' : supabaseUrl) : undefined
   };
 }
@@ -129,6 +145,41 @@ export const supabase: SupabaseClient = isSupabaseConfigured
           detectSessionInUrl: false
         }
       }
-    );
+// WebAuthn / Passkey capability detection
+export function isWebAuthnSupported(): boolean {
+  if (typeof window === 'undefined') return false;
+  return Boolean(
+    window.PublicKeyCredential &&
+    typeof window.PublicKeyCredential === 'function' &&
+    typeof navigator !== 'undefined' &&
+    navigator.credentials &&
+    typeof navigator.credentials.create === 'function' &&
+    typeof navigator.credentials.get === 'function'
+  );
+}
+
+// User-friendly WebAuthn error formatting
+export function formatPasskeyError(err: any): string {
+  if (!err) return 'Passkey operation could not be completed.';
+  const msg = typeof err === 'string' ? err : (err.message || String(err));
+  const lower = msg.toLowerCase();
+
+  if (lower.includes('notallowederror') || lower.includes('canceled') || lower.includes('cancelled') || lower.includes('not allowed')) {
+    return 'Passkey authentication was cancelled.';
+  }
+  if (lower.includes('relying party id') || lower.includes('securityerror') || lower.includes('rp id')) {
+    return 'The passkey is configured for the production domain (the-book-exchange.pages.dev). WebAuthn browser security prevents using this Relying Party ID on other origins.';
+  }
+  if (lower.includes('does not support webauthn') || lower.includes('notsupportederror')) {
+    return 'This device or browser does not support passkeys.';
+  }
+  if (lower.includes('challenge expired') || lower.includes('expired')) {
+    return 'The passkey authentication challenge has expired. Please try again.';
+  }
+  if (lower.includes('no credential') || lower.includes('not found') || lower.includes('no matching passkey')) {
+    return 'No registered passkey found on this device. Please register a passkey from your Account Security settings first.';
+  }
+  return msg;
+}
 
 export default supabase;

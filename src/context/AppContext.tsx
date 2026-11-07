@@ -29,7 +29,7 @@ import {
   initialCurrentUser
 } from '../data/mockData';
 import { api } from '../services/api';
-import { supabase, isSupabaseConfigured, getSupabaseConfigError } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, getSupabaseConfigError, isWebAuthnSupported, formatPasskeyError } from '../lib/supabase';
 
 export const guestProfile: UserAccount = {
   id: 'guest_user',
@@ -102,6 +102,8 @@ export function routeToPath(route: PageRoute): string {
       return '/forgot-password';
     case 'verify-email':
       return '/verify-email';
+    case 'auth-callback':
+      return '/auth/callback';
     case 'profile':
       return '/profile';
     case 'dashboard':
@@ -169,6 +171,9 @@ export function pathToRoute(pathname: string): PageRoute {
       return 'forgot-password';
     case '/verify-email':
       return 'verify-email';
+    case '/auth/callback':
+    case '/callback':
+      return 'auth-callback';
     case '/profile':
       return 'profile';
     case '/dashboard':
@@ -250,10 +255,17 @@ interface AppContextType {
   currentUser: UserAccount;
   setCurrentUser: React.Dispatch<React.SetStateAction<UserAccount>>;
   isAuthenticated: boolean;
+  isAuthLoading: boolean;
+  oauthError: string | null;
   activeRoleView: 'buyer' | 'seller' | 'creator' | 'author' | 'teacher' | 'owner';
   setActiveRoleView: (role: 'buyer' | 'seller' | 'creator' | 'author' | 'teacher' | 'owner') => void;
   login: (credentials: { email: string; password: string }) => Promise<{ success: boolean; error?: string; user?: any }>;
   loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  isPasskeySupported: boolean;
+  loginWithPasskey: () => Promise<{ success: boolean; error?: string; user?: any }>;
+  registerPasskey: (friendlyName?: string) => Promise<{ success: boolean; error?: string; data?: any }>;
+  listPasskeys: () => Promise<{ success: boolean; passkeys?: any[]; error?: string }>;
+  deletePasskey: (passkeyId: string) => Promise<{ success: boolean; error?: string }>;
   register: (data: any) => Promise<{ success: boolean; error?: string; user?: any; verificationToken?: string }>;
   logout: () => Promise<void>;
   resendVerification: (email?: string) => Promise<{ success: boolean; message?: string; error?: string; verificationToken?: string }>;
@@ -440,6 +452,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return Boolean(localStorage.getItem('tbe_auth_token'));
   });
 
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      if (search.includes('code=') || search.includes('error=') || hash.includes('access_token=')) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  const [oauthError, setOauthError] = useState<string | null>(null);
+
   const [activeRoleView, setActiveRoleView] = useState<'buyer' | 'seller' | 'creator' | 'author' | 'teacher' | 'owner'>('buyer');
 
   const [currentUser, setCurrentUser] = useState<UserAccount>(() => {
@@ -520,56 +545,259 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => { isMounted = false; };
   }, []);
 
-  // Auto-synchronize Supabase OAuth sign-ins (e.g. Google Sign-in) with backend SQLite
+  // Process Google OAuth return, PKCE code exchange, and auth state changes
   useEffect(() => {
-    if (isSupabaseConfigured) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session && session.user && !localStorage.getItem('tbe_auth_token')) {
-          api.syncSupabaseUser({
-            email: session.user.email || '',
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Google User',
-            avatar: session.user.user_metadata?.avatar_url,
-            supabaseId: session.user.id
-          }).then(res => {
-            if (res && res.user) {
-              setCurrentUser(res.user);
-              setIsAuthenticated(true);
-            }
-          }).catch(err => console.warn('Supabase sync warning:', err));
-        }
-      });
+    if (!isSupabaseConfigured || typeof window === 'undefined') {
+      setIsAuthLoading(false);
+      return;
+    }
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session && session.user) {
-          try {
+    let isMounted = true;
+
+    const processOAuthReturn = async () => {
+      try {
+        const url = new URL(window.location.href);
+        const searchParams = url.searchParams;
+        const hash = window.location.hash.substring(1);
+        const hashParams = new URLSearchParams(hash);
+
+        // 1. Check for provider error in query string or hash fragment
+        const errorParam = searchParams.get('error') || hashParams.get('error');
+        const errorDesc =
+          searchParams.get('error_description') ||
+          hashParams.get('error_description') ||
+          searchParams.get('error_code');
+
+        if (errorParam || errorDesc) {
+          const fullError = decodeURIComponent(errorDesc || errorParam || 'Authentication failed').replace(/\+/g, ' ');
+          console.error('Google OAuth callback returned error:', fullError);
+          if (isMounted) {
+            setOauthError(fullError);
+            setIsAuthLoading(false);
+          }
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return;
+        }
+
+        // 2. Check for password recovery callback (?type=recovery or #type=recovery)
+        const typeParam = searchParams.get('type') || hashParams.get('type');
+        if (typeParam === 'recovery') {
+          console.log('Password recovery callback detected');
+          if (isMounted) {
+            setIsAuthLoading(false);
+            setCurrentPage('forgot-password');
+          }
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return;
+        }
+
+        // 3. Process PKCE authorization code (?code=...) with deduplication
+        const code = searchParams.get('code');
+        if (code) {
+          setIsAuthLoading(true);
+
+          // Check if Supabase already processed the session automatically via detectSessionInUrl
+          let { data: { session } } = await supabase.auth.getSession();
+
+          const alreadyExchanged = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('tbe_oauth_code') === code;
+
+          if (!session && !alreadyExchanged) {
+            if (typeof sessionStorage !== 'undefined') {
+              sessionStorage.setItem('tbe_oauth_code', code);
+            }
+            console.log('Exchanging PKCE authorization code for session...');
+            const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+            if (exchangeError) {
+              console.warn('exchangeCodeForSession notice:', exchangeError.message);
+              // Check session again in case automatic detection completed concurrently
+              const sessionCheck = await supabase.auth.getSession();
+              session = sessionCheck.data.session;
+              if (!session && isMounted) {
+                setOauthError(exchangeError.message || 'Failed to exchange authorization code for session.');
+                setIsAuthLoading(false);
+                window.history.replaceState({}, document.title, window.location.pathname);
+                return;
+              }
+            } else if (data && data.session) {
+              session = data.session;
+            }
+          }
+
+          if (session && session.user) {
+            const user = session.user;
+            console.log('Successfully confirmed Supabase user session:', user.email);
+
+            const syncRes = await api.syncSupabaseUser({
+              email: user.email || '',
+              name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Google User',
+              avatar: user.user_metadata?.avatar_url || user.user_metadata?.picture,
+              supabaseId: user.id
+            });
+
+            if (isMounted && syncRes && syncRes.user) {
+              setCurrentUser(syncRes.user);
+              setIsAuthenticated(true);
+              setOauthError(null);
+              setIsAuthLoading(false);
+              window.history.replaceState({}, document.title, window.location.pathname);
+
+              if (returnUrl) {
+                const target = returnUrl;
+                setReturnUrl(null);
+                setCurrentPage(target);
+              } else {
+                setCurrentPage('dashboard');
+              }
+              return;
+            }
+          }
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setIsAuthLoading(false);
+          return;
+        }
+
+        // 4. Process Implicit flow tokens in hash (#access_token=...)
+        if (hash.includes('access_token=')) {
+          setIsAuthLoading(true);
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session && session.user) {
+            const syncRes = await api.syncSupabaseUser({
+              email: session.user.email || '',
+              name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Google User',
+              avatar: session.user.user_metadata?.avatar_url,
+              supabaseId: session.user.id
+            });
+            if (isMounted && syncRes && syncRes.user) {
+              setCurrentUser(syncRes.user);
+              setIsAuthenticated(true);
+              setOauthError(null);
+              setIsAuthLoading(false);
+              window.history.replaceState({}, document.title, window.location.pathname);
+              setCurrentPage('dashboard');
+              return;
+            }
+          }
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setIsAuthLoading(false);
+          return;
+        }
+
+        // 5. Existing active Supabase session check
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (existingSession && existingSession.user && !localStorage.getItem('tbe_auth_token')) {
+          const syncRes = await api.syncSupabaseUser({
+            email: existingSession.user.email || '',
+            name: existingSession.user.user_metadata?.full_name || existingSession.user.email?.split('@')[0] || 'Google User',
+            avatar: existingSession.user.user_metadata?.avatar_url,
+            supabaseId: existingSession.user.id
+          });
+          if (isMounted && syncRes && syncRes.user) {
+            setCurrentUser(syncRes.user);
+            setIsAuthenticated(true);
+          }
+        }
+      } catch (err: any) {
+        console.warn('OAuth processing error:', err);
+        if (isMounted) {
+          setOauthError(err.message || 'An unexpected error occurred during Google authentication.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsAuthLoading(false);
+        }
+      }
+    };
+
+    processOAuthReturn();
+
+    // Listen to real-time auth state events (e.g. PASSWORD_RECOVERY, token refreshes, tab changes)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Supabase onAuthStateChange:', event);
+      if (event === 'PASSWORD_RECOVERY') {
+        if (isMounted) {
+          setIsAuthLoading(false);
+          setCurrentPage('forgot-password');
+        }
+      } else if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session && session.user) {
+        try {
+          if (!localStorage.getItem('tbe_auth_token')) {
             const res = await api.syncSupabaseUser({
               email: session.user.email || '',
               name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Google User',
               avatar: session.user.user_metadata?.avatar_url,
               supabaseId: session.user.id
             });
-            if (res && res.user) {
+            if (isMounted && res && res.user) {
               setCurrentUser(res.user);
               setIsAuthenticated(true);
             }
-          } catch (e) {
-            console.warn('OAuth sync failure:', e);
           }
+        } catch (e) {
+          console.warn('OAuth sync failure in onAuthStateChange:', e);
         }
-      });
+      } else if (event === 'SIGNED_OUT') {
+        if (isMounted) {
+          setIsAuthenticated(false);
+          setCurrentUser(guestProfile);
+        }
+      }
+    });
 
-      return () => {
-        subscription.unsubscribe();
-      };
-    }
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (credentials: { email: string; password: string }) => {
     try {
-      const res = await api.login(credentials);
-      if (res && res.token && res.user) {
-        localStorage.setItem('tbe_auth_token', res.token);
-        setCurrentUser(res.user);
+      const cleanEmail = credentials.email.toLowerCase().trim();
+      let authUser: UserAccount | null = null;
+      let authToken: string | null = null;
+
+      // 1. Authoritative login via Supabase Auth when configured
+      if (isSupabaseConfigured) {
+        const { data: sbData, error: sbError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password: credentials.password
+        });
+
+        if (!sbError && sbData?.user) {
+          const user = sbData.user;
+          const syncRes = await api.syncSupabaseUser({
+            email: user.email || cleanEmail,
+            name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+            avatar: user.user_metadata?.avatar_url,
+            supabaseId: user.id
+          });
+          if (syncRes && syncRes.user && syncRes.token) {
+            authUser = syncRes.user;
+            authToken = syncRes.token;
+          }
+        }
+      }
+
+      // 2. Direct backend database verification (for seeded/existing SQLite accounts)
+      if (!authUser || !authToken) {
+        const res = await api.login({ email: cleanEmail, password: credentials.password });
+        if (res && res.token && res.user) {
+          authUser = res.user;
+          authToken = res.token;
+
+          // If Supabase is configured, quietly register into Supabase Auth for unified parity
+          if (isSupabaseConfigured) {
+            supabase.auth.signUp({
+              email: cleanEmail,
+              password: credentials.password,
+              options: { data: { name: res.user.name } }
+            }).catch(() => {});
+          }
+        }
+      }
+
+      if (authUser && authToken) {
+        localStorage.setItem('tbe_auth_token', authToken);
+        setCurrentUser(authUser);
         setIsAuthenticated(true);
         if (returnUrl) {
           const target = returnUrl;
@@ -578,11 +806,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         } else {
           setCurrentPage('account');
         }
-        return { success: true, user: res.user };
+        return { success: true, user: authUser };
       }
-      return { success: false, error: res?.error || 'Authentication failed' };
+
+      return {
+        success: false,
+        error: 'Incorrect email or password. Please verify your credentials or create a new account.'
+      };
     } catch (err: any) {
-      return { success: false, error: err.message || 'Login failed' };
+      return { success: false, error: err.message || 'Login failed. Please check your credentials.' };
     }
   };
 
@@ -597,15 +829,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
     }
     try {
-      const redirectUri =
-        typeof window !== 'undefined' && window.location
-          ? `${window.location.origin}/login`
-          : undefined;
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      // Support dedicated callback route as primary redirect
+      const redirectUri = `${origin}/auth/callback`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectUri
+          redirectTo: redirectUri,
+          scopes: 'email profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account'
+          }
         }
       });
       if (error) {
@@ -617,9 +853,159 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const [isPasskeySupported, setIsPasskeySupported] = useState<boolean>(() => isWebAuthnSupported());
+
+  useEffect(() => {
+    setIsPasskeySupported(isWebAuthnSupported());
+  }, []);
+
+  const loginWithPasskey = async () => {
+    if (!isSupabaseConfigured) {
+      return {
+        success: false,
+        error: 'Supabase credentials are required to use passkey authentication.'
+      };
+    }
+    if (!isWebAuthnSupported()) {
+      return {
+        success: false,
+        error: 'This device or browser does not support passkeys.'
+      };
+    }
+
+    try {
+      console.log('Initiating passkey authentication ceremony...');
+      const { data, error } = await supabase.auth.signInWithPasskey();
+      if (error) {
+        return {
+          success: false,
+          error: formatPasskeyError(error)
+        };
+      }
+
+      if (data && data.user) {
+        const user = data.user;
+        const syncRes = await api.syncSupabaseUser({
+          email: user.email || '',
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Passkey User',
+          avatar: user.user_metadata?.avatar_url,
+          supabaseId: user.id
+        });
+
+        if (syncRes && syncRes.user && syncRes.token) {
+          localStorage.setItem('tbe_auth_token', syncRes.token);
+          setCurrentUser(syncRes.user);
+          setIsAuthenticated(true);
+          if (returnUrl) {
+            const target = returnUrl;
+            setReturnUrl(null);
+            setCurrentPage(target);
+          } else {
+            setCurrentPage('dashboard');
+          }
+          return { success: true, user: syncRes.user };
+        }
+      }
+
+      return {
+        success: false,
+        error: 'Passkey verification succeeded, but session could not be established.'
+      };
+    } catch (err: any) {
+      return { success: false, error: formatPasskeyError(err) };
+    }
+  };
+
+  const registerPasskey = async (friendlyName?: string) => {
+    if (!isSupabaseConfigured) {
+      return { success: false, error: 'Supabase credentials are required to register a passkey.' };
+    }
+    if (!isWebAuthnSupported()) {
+      return { success: false, error: 'This device or browser does not support passkeys.' };
+    }
+
+    try {
+      console.log('Starting passkey registration ceremony...');
+      const { data, error } = await supabase.auth.registerPasskey();
+      if (error) {
+        return { success: false, error: formatPasskeyError(error) };
+      }
+
+      if (data && data.id && friendlyName?.trim()) {
+        try {
+          await supabase.auth.passkey.update({
+            passkeyId: data.id,
+            friendlyName: friendlyName.trim()
+          });
+        } catch (e) {
+          console.warn('Could not update passkey friendly name:', e);
+        }
+      }
+
+      return { success: true, data };
+    } catch (err: any) {
+      return { success: false, error: formatPasskeyError(err) };
+    }
+  };
+
+  const listPasskeys = async () => {
+    if (!isSupabaseConfigured) {
+      return { success: false, passkeys: [], error: 'Supabase configuration is required.' };
+    }
+    try {
+      const { data, error } = await supabase.auth.passkey.list();
+      if (error) {
+        return { success: false, passkeys: [], error: error.message };
+      }
+      return { success: true, passkeys: data || [] };
+    } catch (err: any) {
+      return { success: false, passkeys: [], error: err.message || 'Could not load passkeys.' };
+    }
+  };
+
+  const deletePasskey = async (passkeyId: string) => {
+    if (!isSupabaseConfigured) {
+      return { success: false, error: 'Supabase configuration is required.' };
+    }
+    try {
+      const { error } = await supabase.auth.passkey.delete({ passkeyId });
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Failed to remove passkey.' };
+    }
+  };
+
   const register = async (data: any) => {
     try {
-      const res = await api.register(data);
+      const cleanEmail = data.email.toLowerCase().trim();
+
+      // 1. Authoritative registration in Supabase Auth if configured
+      if (isSupabaseConfigured) {
+        const { error: sbError } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: data.password,
+          options: {
+            data: {
+              name: data.name,
+              roles: data.roles || ['buyer']
+            }
+          }
+        });
+
+        if (sbError && !sbError.message.toLowerCase().includes('already registered')) {
+          return { success: false, error: sbError.message };
+        }
+      }
+
+      // 2. Register profile in SQLite backend database
+      const res = await api.register({
+        ...data,
+        email: cleanEmail
+      });
+
       if (res && res.token && res.user) {
         localStorage.setItem('tbe_auth_token', res.token);
         setCurrentUser(res.user);
@@ -1365,10 +1751,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         currentUser,
         setCurrentUser,
         isAuthenticated,
+        isAuthLoading,
+        oauthError,
         activeRoleView,
         setActiveRoleView,
         login,
         loginWithGoogle,
+        isPasskeySupported,
+        loginWithPasskey,
+        registerPasskey,
+        listPasskeys,
+        deletePasskey,
         register,
         logout,
         resendVerification,

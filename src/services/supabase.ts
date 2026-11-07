@@ -5,5 +5,6 @@ export {
   isSupabaseConfigured,
   getSupabaseConfigError,
   getSupabaseConfigStatus,
+  getSupabaseProjectRef,
   default
 } from '../lib/supabase';

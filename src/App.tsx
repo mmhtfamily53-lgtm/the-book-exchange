@@ -45,6 +45,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { AuthCallbackPage } from './pages/AuthCallbackPage';
 
 const AppContent: React.FC = () => {
   const { currentPage } = useApp();
@@ -99,6 +100,8 @@ const AppContent: React.FC = () => {
         return <ForgotPasswordPage />;
       case 'verify-email':
         return <AccountPage />;
+      case 'auth-callback':
+        return <AuthCallbackPage />;
       case 'profile':
         return <ProfilePage />;
       case 'dashboard':

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export const SettingsPage: React.FC = () => {
   const { currentUser, setCurrentUser, setCurrentPage, logout } = useApp();
@@ -31,6 +32,30 @@ export const SettingsPage: React.FC = () => {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [pwdLoading, setPwdLoading] = useState(false);
   const [pwdMsg, setPwdMsg] = useState<{ text: string; error: boolean } | null>(null);
+  const [isGoogleOnly, setIsGoogleOnly] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    async function checkUserAuthProvider() {
+      if (isSupabaseConfigured) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const hasGoogle = user.app_metadata?.provider === 'google' ||
+              user.identities?.some(id => id.provider === 'google');
+            const hasEmailProvider = user.identities?.some(id => id.provider === 'email');
+            if (hasGoogle && !hasEmailProvider) {
+              setIsGoogleOnly(true);
+            }
+          }
+        } catch {
+          // Keep default
+        }
+      } else if (currentUser.boardOrUniversity === 'Verified Google Account' || currentUser.bio?.includes('Google')) {
+        setIsGoogleOnly(true);
+      }
+    }
+    checkUserAuthProvider();
+  }, [currentUser]);
 
   // Role Activation State
   const [roleLoading, setRoleLoading] = useState<string | null>(null);
@@ -65,20 +90,45 @@ export const SettingsPage: React.FC = () => {
       return;
     }
 
+    if (!isGoogleOnly && !currentPassword) {
+      setPwdMsg({ text: 'Please enter your current password.', error: true });
+      return;
+    }
+
     setPwdLoading(true);
 
     try {
+      // 1. If Supabase is configured and has an active user session, authoritatively update in Supabase
+      if (isSupabaseConfigured) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+          if (updateError) {
+            setPwdMsg({ text: updateError.message || 'Supabase could not update your password.', error: true });
+            setPwdLoading(false);
+            return;
+          }
+        }
+      }
+
+      // 2. Synchronize new password with SQLite database
       const res = await api.changePassword({
-        currentPassword,
+        currentPassword: isGoogleOnly ? undefined : currentPassword,
         newPassword,
-        confirmPassword: confirmNewPassword
+        confirmPassword: confirmNewPassword,
+        isGoogleAccount: isGoogleOnly
       });
-      setPwdMsg({ text: res.message || 'Password changed successfully.', error: false });
+
+      setPwdMsg({
+        text: res.message || 'Your password has been changed successfully. You can now use your new password across all devices.',
+        error: false
+      });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
+      setIsGoogleOnly(false);
     } catch (err: any) {
-      setPwdMsg({ text: err.message || 'Failed to change password.', error: true });
+      setPwdMsg({ text: err.message || 'Failed to change password. Please check your current password.', error: true });
     } finally {
       setPwdLoading(false);
     }
@@ -191,11 +241,20 @@ export const SettingsPage: React.FC = () => {
         <div className="space-y-6">
           <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 shadow-sm">
             <h2 className="text-base font-bold font-editorial text-stone-900 dark:text-slate-100 mb-1">
-              Change Account Password
+              {isGoogleOnly ? 'Set Account Password' : 'Change Account Password'}
             </h2>
             <p className="text-xs text-stone-500 dark:text-slate-400 mb-5">
-              Ensure your new password contains at least 6 characters with a combination of letters and numbers.
+              {isGoogleOnly
+                ? 'Your account was created via Google Sign-In. You can set a password to also sign in directly using your email address.'
+                : 'Ensure your new password contains at least 6 characters with a combination of letters and numbers.'}
             </p>
+
+            {isGoogleOnly && (
+              <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 text-xs mb-4 flex items-center gap-2.5">
+                <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                <span>Signed in via Google. Setting a password adds email/password sign-in capability to your account.</span>
+              </div>
+            )}
 
             {pwdMsg && (
               <div
@@ -211,19 +270,21 @@ export const SettingsPage: React.FC = () => {
             )}
 
             <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
-              <div>
-                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">
-                  Current Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter current password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-xs"
-                />
-              </div>
+              {!isGoogleOnly && (
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">
+                    Current Password *
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter current password"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-xs outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1">

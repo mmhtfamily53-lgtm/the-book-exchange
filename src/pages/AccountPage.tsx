@@ -30,6 +30,8 @@ import { useApp } from '../context/AppContext';
 export const AccountPage: React.FC = () => {
   const {
     isAuthenticated,
+    isAuthLoading,
+    loginWithGoogle,
     currentUser,
     setCurrentPage,
     logout,
@@ -93,6 +95,23 @@ export const AccountPage: React.FC = () => {
 
   const unreadMessagesCount = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
   const activeExchangesCount = exchangeProposals.filter(p => p.status === 'pending').length;
+
+  // If authentication handshake is actively running
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md bg-white dark:bg-slate-900 p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-xl space-y-4 text-center animate-in fade-in">
+          <RefreshCw className="w-8 h-8 text-amber-600 dark:text-amber-400 animate-spin mx-auto" />
+          <h2 className="text-xl font-bold font-editorial text-stone-900 dark:text-slate-100">
+            Connecting Your Account...
+          </h2>
+          <p className="text-xs text-stone-500 dark:text-slate-400 leading-relaxed">
+            Please wait while we verify your credentials and prepare your personal dashboard.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // -------------------------------------------------------------
   // VIEW A: GUEST / NOT LOGGED IN (Amazon/Google Style Landing)

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export const ForgotPasswordPage: React.FC = () => {
   const { setCurrentPage } = useApp();
@@ -21,9 +22,36 @@ export const ForgotPasswordPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  const [hasRecoverySession, setHasRecoverySession] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Check if user landed from an email recovery link
+  React.useEffect(() => {
+    async function checkRecoveryState() {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const isRecovery = urlParams.get('type') === 'recovery' || hashParams.get('type') === 'recovery';
+        const urlToken = urlParams.get('token');
+
+        if (urlToken) {
+          setResetToken(urlToken);
+          setStep('reset');
+        }
+
+        if (isRecovery && isSupabaseConfigured) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            setHasRecoverySession(true);
+            setStep('reset');
+          }
+        }
+      }
+    }
+    checkRecoveryState();
+  }, []);
 
   const handleRequestToken = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,14 +59,37 @@ export const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await api.forgotPassword(email);
-      setSuccessMsg(res.message || 'Recovery instructions prepared.');
-      if (res.resetToken) {
+      let supabaseSent = false;
+      // 1. Authoritative Supabase recovery link delivery
+      if (isSupabaseConfigured) {
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const recoveryRedirect = `${origin}/auth/callback?type=recovery`;
+
+        const { error: sbError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: recoveryRedirect
+        });
+
+        if (sbError) {
+          console.warn('Supabase resetPasswordForEmail notice:', sbError.message);
+        } else {
+          supabaseSent = true;
+        }
+      }
+
+      // 2. Fallback backend in-app token generator
+      const res = await api.forgotPassword(email.trim()).catch(() => null);
+
+      if (supabaseSent) {
+        setSuccessMsg('If an account exists with this email address, a password reset link has been dispatched to your inbox. Please check your email to proceed.');
+      } else if (res && res.resetToken) {
+        setSuccessMsg(res.message || 'Recovery instructions prepared.');
         setResetToken(res.resetToken);
         setStep('reset');
+      } else {
+        setSuccessMsg('If an account exists with this email address, password recovery instructions have been prepared.');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to request password recovery.');
+      setError(err.message || 'Failed to request password recovery. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -61,17 +112,31 @@ export const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const res = await api.resetPassword({
-        token: resetToken,
-        newPassword,
-        confirmPassword
-      });
-      setSuccessMsg(res.message || 'Password reset successfully.');
+      // If user holds a Supabase recovery session
+      if (hasRecoverySession && isSupabaseConfigured) {
+        const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+        if (updateError) {
+          setError(updateError.message || 'The password reset link is invalid or has expired. Please request a new recovery link.');
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Synchronize with database
+      if (resetToken.trim()) {
+        await api.resetPassword({
+          token: resetToken.trim(),
+          newPassword,
+          confirmPassword
+        });
+      }
+
+      setSuccessMsg('Password updated successfully! Redirecting you to sign in with your new credentials...');
       setTimeout(() => {
         setCurrentPage('login');
       }, 1500);
     } catch (err: any) {
-      setError(err.message || 'Failed to reset password.');
+      setError(err.message || 'Failed to reset password. The link or token may have expired.');
     } finally {
       setLoading(false);
     }
@@ -160,22 +225,29 @@ export const ForgotPasswordPage: React.FC = () => {
         ) : (
           /* Step 2: Set New Password */
           <form onSubmit={handleResetPassword} className="space-y-4 bg-white dark:bg-slate-900 p-8 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-xl">
-            <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1.5">
-                Recovery Token
-              </label>
-              <div className="relative">
-                <KeyRound className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
-                <input
-                  type="text"
-                  required
-                  placeholder="Paste 64-character reset token"
-                  value={resetToken}
-                  onChange={e => setResetToken(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-xs text-stone-900 dark:text-slate-100 placeholder:text-stone-400 focus:ring-2 focus:ring-amber-500 outline-none font-mono"
-                />
+            {hasRecoverySession ? (
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                <span>Verified via secure recovery link. Choose your new password below.</span>
               </div>
-            </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1.5">
+                  Recovery Token *
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Paste 64-character reset token"
+                    value={resetToken}
+                    onChange={e => setResetToken(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-xs text-stone-900 dark:text-slate-100 placeholder:text-stone-400 focus:ring-2 focus:ring-amber-500 outline-none font-mono"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold text-stone-700 dark:text-slate-300 mb-1.5">
@@ -213,7 +285,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
             <button
               type="submit"
-              disabled={loading || !resetToken.trim()}
+              disabled={loading || (!hasRecoverySession && !resetToken.trim())}
               className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {loading ? 'Updating Password...' : 'Save New Password & Sign In'}
